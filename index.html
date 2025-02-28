@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dynamic Vector Visualization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Include MathJax for rendering LaTeX equations -->
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["\\(", "\\)"],
+            ["$begin:math:text$", "$end:math:text$"],
+          ],
+        },
+        startup: {
+          typeset: false,
+        },
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background-color: #f5f5f5; /* light neutral background */
+        color: #333;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+        flex-grow: 1;
+        /* Default for mobile: stack layout */
+        display: block;
+        /* Apply flex layout only on wider screens */
+
+        flex-direction: row;
+        gap: 1rem;
+      }
+
+      @media (min-width: 1100px) {
+        .container {
+          width: 90%;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 1rem;
+          flex-grow: 1;
+          display: flex;
+          flex-direction: row;
+          gap: 1rem;
+        }
+        #left-section,
+        #plot-wrapper {
+          width: 50%;
+          flex: 0 0 50%; /* Prevent flex growth/shrinkage and keep at exactly 50% */
+        }
+      }
+
+      #left-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .input-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+        background: #fff;
+        padding: 1rem;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .input-group label {
+        margin-bottom: 0.25rem;
+        font-weight: bold;
+        font-size: 0.9rem;
+      }
+
+      .input-group input {
+        padding: 0.5rem;
+        width: 5rem;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+
+      /* Fancy Equation Bar */
+      .equation-section {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .equation-title {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+      }
+      .equation-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #444;
+      }
+
+      #plot {
+        width: 100%;
+        height: 60vh; /* adjust as needed */
+      }
+
+      #plot-wrapper {
+        flex-grow: 1;
+        background: #fff;
+        padding: 1rem;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      #plot {
+        width: 100%;
+        height: 100%; /* Changed from fixed 60vh to 100% */
+      }
+
+      #plot-wrapper {
+        flex-grow: 1;
+        background: #fff;
+        padding: 1rem;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+      }
+
+      footer {
+        text-align: center;
+        padding: 1rem;
+        font-size: 0.8rem;
+        color: #666;
+      }
+
+      button {
+        padding: 0.6rem 1.2rem;
+        background-color: #2c5aa0; /* Darker blue color */
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); /* Smoother transition curve */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      button:hover {
+        background-color: #3666b0;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25),
+          0 0 8px rgba(78, 156, 255, 0.3);
+        transform: translateY(-3px) scale(1.03);
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      }
+
+      button:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      button:hover {
+        background-color: #3b78de;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      button:focus {
+        outline: 2px solid rgba(74, 134, 232, 0.5);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Input Section -->
+      <div id="left-section">
+        <div class="input-section">
+          <div class="input-group">
+            <label for="a_x">a<sub>x</sub></label>
+            <input type="number" id="a_x" value="3" step="any" />
+          </div>
+          <div class="input-group">
+            <label for="a_y">a<sub>y</sub></label>
+            <input type="number" id="a_y" value="2" step="any" />
+          </div>
+          <br />
+          <div class="input-group">
+            <label for="b_x">b<sub>x</sub></label>
+            <input type="number" id="b_x" value="2" step="any" />
+          </div>
+          <div class="input-group">
+            <label for="b_y">b<sub>y</sub></label>
+            <input type="number" id="b_y" value="1" step="any" />
+          </div>
+
+          <button onclick="update_plot()">Update Plot</button>
+        </div>
+
+        <!-- Fancy Equation Section (with dynamic content) -->
+        <div class="equation-section">
+          <div class="equation-title">Equations &amp; Substituted Values</div>
+          <div class="equation-content" id="equation_content">
+            <!-- Will be updated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Plot Section -->
+      <div id="plot-wrapper">
+        <div class="plot-controls" style="margin-bottom: 0.5rem">
+          <button onclick="reset_plot_view()">Reset View</button>
+        </div>
+        <div id="plot"></div>
+      </div>
+    </div>
+
+    <footer>
+      Vector Visualization with Projection &amp; Perpendicular (Dynamic
+      Equations)
+    </footer>
+
+    <!-- Plotly.js from CDN (updated to version 3.0.1) -->
+    <script
+      src="https://cdn.plot.ly/plotly-3.0.1.min.js"
+      charset="utf-8"
+    ></script>
+
+    <script>
+      /*
+      Steps for calculation (a = (a_x, a_y), b = (b_x, b_y)):
+
+        1. dot_product = a_x * b_x + a_y * b_y
+        2. b_magnitude_sq = b_x^2 + b_y^2
+        3. projection_scalar = dot_product / b_magnitude_sq
+        4. proj_x = projection_scalar * b_x
+           proj_y = projection_scalar * b_y
+        5. perp_x = a_x - proj_x
+           perp_y = a_y - proj_y
+    */
+
+      // Main function to get user inputs, compute everything, update equation text, and update plot
+      function update_plot() {
+        let a_x = parseFloat(document.getElementById("a_x").value);
+        let a_y = parseFloat(document.getElementById("a_y").value);
+        let b_x = parseFloat(document.getElementById("b_x").value);
+        let b_y = parseFloat(document.getElementById("b_y").value);
+
+        let dot_product = a_x * b_x + a_y * b_y;
+        let b_magnitude_sq = b_x ** 2 + b_y ** 2;
+
+        let proj_x = 0;
+        let proj_y = 0;
+        let perp_x = 0;
+        let perp_y = 0;
+
+        if (b_magnitude_sq !== 0) {
+          let projection_scalar = dot_product / b_magnitude_sq;
+          proj_x = projection_scalar * b_x;
+          proj_y = projection_scalar * b_y;
+          perp_x = a_x - proj_x;
+          perp_y = a_y - proj_y;
+        }
+
+        update_equations(
+          a_x,
+          a_y,
+          b_x,
+          b_y,
+          dot_product,
+          b_magnitude_sq,
+          proj_x,
+          proj_y,
+          perp_x,
+          perp_y
+        );
+        draw_plot(a_x, a_y, b_x, b_y, proj_x, proj_y, perp_x, perp_y);
+      }
+
+      // Updates the LaTeX equations in the .equation-content div, showing numeric substitutions
+      function update_equations(
+        a_x,
+        a_y,
+        b_x,
+        b_y,
+        dot_product,
+        b_magnitude_sq,
+        proj_x,
+        proj_y,
+        perp_x,
+        perp_y
+      ) {
+        // A small helper to nicely format numbers
+        let fmt = (num) => Math.floor(num).toString();
+        let fmt_float = (num) => num.toFixed(2);
+
+        // Build the dynamic LaTeX string
+        let latex_str = `$begin:math:text$
+\\displaystyle \\mathbf{a} = \\langle ${fmt(a_x)},\\, ${fmt(a_y)} \\rangle
+\\quad,\\quad
+\\mathbf{b} = \\langle ${fmt(b_x)},\\, ${fmt(b_y)} \\rangle
+$end:math:text$
+
+<br><br>
+
+$begin:math:text$
+\\displaystyle
+\\mathbf{a} \\cdot \\mathbf{b}
+= ${fmt(a_x)} \\times ${fmt(b_x)}
+  + ${fmt(a_y)} \\times ${fmt(b_y)}
+= ${fmt(dot_product)}
+$end:math:text$
+
+<br><br>
+
+$begin:math:text$
+\\displaystyle
+\\text{proj}_{\\mathbf{b}}(\\mathbf{a})
+= \\left( \\frac{\\mathbf{a} \\cdot \\mathbf{b}}{\\mathbf{b} \\cdot \\mathbf{b}} \\right) \\mathbf{b}
+= \\left( \\frac{${fmt(dot_product)}}{${fmt(b_magnitude_sq)}} \\right)
+  \\langle ${fmt(b_x)},\\, ${fmt(b_y)} \\rangle
+= \\langle ${fmt_float(proj_x)},\\, ${fmt_float(proj_y)} \\rangle
+$end:math:text$
+
+<br><br>
+
+$begin:math:text$
+\\displaystyle
+\\mathbf{a}_{\\perp}
+= \\mathbf{a} - \\text{proj}_{\\mathbf{b}}(\\mathbf{a})
+= \\langle ${fmt(a_x)},\\, ${fmt(a_y)} \\rangle
+  - \\langle ${fmt_float(proj_x)},\\, ${fmt_float(proj_y)} \\rangle
+= \\langle ${fmt_float(perp_x)},\\, ${fmt_float(perp_y)} \\rangle
+$end:math:text$
+`;
+
+        // Update the DOM
+        document.getElementById("equation_content").innerHTML = latex_str;
+
+        // Re-typeset the new LaTeX in #equation_content
+        if (window.MathJax) {
+          window.MathJax.typesetPromise([
+            document.getElementById("equation_content"),
+          ]).catch((err) => console.error("MathJax typeset error:", err));
+        }
+      }
+
+      // Draws or updates the Plotly graph
+      function draw_plot(a_x, a_y, b_x, b_y, proj_x, proj_y, perp_x, perp_y) {
+        let vector_a_trace = {
+          x: [0, a_x],
+          y: [0, a_y],
+          // CHANGED: Include 'text' in mode
+          mode: "lines+markers+text",
+          name: "Vector a",
+          line: { color: "blue", width: 3 },
+
+          // NEW: Provide text array (matching length of x & y).
+          // The first point is '' (no label at origin), second is 'a'.
+          text: ["O", "a"],
+
+          // NEW: Position the text above the tip
+          textposition: "bottom right",
+
+          // OPTIONAL: Increase font size or style
+          textfont: { size: 14 },
+        };
+
+        let vector_b_trace = {
+          x: [0, b_x],
+          y: [0, b_y],
+          // CHANGED: Include 'text' in mode
+          mode: "lines+markers+text",
+          name: "Vector b",
+          line: { color: "red", width: 3 },
+
+          // NEW: Provide text array (matching length of x & y).
+          // The first point is '' (no label at origin), second is 'a'.
+          text: ["", "b"],
+
+          // NEW: Position the text above the tip
+          textposition: "bottom right",
+
+          // OPTIONAL: Increase font size or style
+          textfont: { size: 14 },
+        };
+
+        let projection_trace = {
+          x: [0, proj_x],
+          y: [0, proj_y],
+          mode: "lines+markers",
+          name: "Projection (a onto b)",
+          line: { color: "green", dash: "dot", width: 3 },
+        };
+
+        let perpendicular_trace = {
+          x: [proj_x, a_x],
+          y: [proj_y, a_y],
+          mode: "lines+markers",
+          name: "Perpendicular",
+          line: { color: "orange", dash: "dash", width: 3 },
+        };
+
+        // 2. Figure out a bounding box that ensures a 1:1 scale
+        let { x_range, y_range } = compute_axis_ranges(
+          [0, a_x, b_x, proj_x, a_x],
+          [0, a_y, b_y, proj_y, a_y]
+        );
+
+        // 3. Layout with scaleanchor/scaleratio
+        let layout = {
+          title: "Vector Visualization (1:1 Aspect Ratio)",
+          xaxis: {
+            range: x_range,
+            scaleanchor: "y", // tie the scale of x-axis to y-axis
+            scaleratio: 1,
+            title: "X",
+          },
+          yaxis: {
+            range: y_range,
+            scaleanchor: "x", // tie the scale of y-axis to x-axis
+            scaleratio: 1,
+            title: "Y",
+          },
+          showlegend: true,
+          legend: {
+            x: 1,
+            y: 0,
+            xanchor: "right",
+            yanchor: "bottom",
+          },
+        };
+
+        let data = [
+          vector_a_trace,
+          vector_b_trace,
+          projection_trace,
+          perpendicular_trace,
+        ];
+        Plotly.newPlot("plot", data, layout, { responsive: true });
+      }
+
+      // Helper to set the axis range (center around min and max)
+      function compute_axis_ranges(all_x, all_y) {
+        let min_x = Math.min(...all_x),
+          max_x = Math.max(...all_x);
+        let min_y = Math.min(...all_y),
+          max_y = Math.max(...all_y);
+
+        // Expand if there's zero range
+        let dx = Math.max(max_x - min_x, 0.1);
+        let dy = Math.max(max_y - min_y, 0.1);
+        let d = Math.max(dx, dy); // force a square region
+
+        let cx = (min_x + max_x) / 2;
+        let cy = (min_y + max_y) / 2;
+
+        return {
+          x_range: [cx - d / 2, cx + d / 2],
+          y_range: [cy - d / 2, cy + d / 2],
+        };
+      }
+
+      // Reset the plot view to the initial state
+      function reset_plot_view() {
+        update_plot();
+      }
+
+      // Listen for user input changes
+      document.querySelectorAll('input[type="number"]').forEach((input) => {
+        input.addEventListener("input", update_plot);
+      });
+
+      // Initial plot on page load
+      update_plot();
+    </script>
+  </body>
+</html>
