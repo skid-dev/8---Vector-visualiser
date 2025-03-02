@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Vector Visualizer</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                display: flex;
+                font-family: sans-serif;
+                height: 100vh;
+            }
+            #panel {
+                width: 300px;
+                padding: 10px;
+                box-sizing: border-box;
+                background: #f0f0f0;
+                border-right: 1px solid #ccc;
+                overflow-y: auto;
+            }
+            #input_form {
+                display: flex;
+                gap: 5px;
+                margin-bottom: 10px;
+            }
+            #vector_input {
+                flex: 1;
+            }
+            #vectors_list {
+                margin-top: 10px;
+            }
+            #canvas_container {
+                flex: 1;
+            }
+            .vector_item {
+                margin: 5px 0;
+                padding: 5px;
+                background: #ffffff;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                word-break: break-all;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="panel">
+            <h3>Vector Visualizer</h3>
+            <p>Examples of valid inputs:</p>
+            <ul>
+                <li><strong>A = 2i + 3j</strong> (Defines point A at coordinates (2,3))</li>
+                <li><strong>2i + 3j</strong> (Adds a vector from origin (0,0) to (2,3))</li>
+                <li><strong>\vec{AB}</strong> (Adds a vector from point A to point B, if both are defined)</li>
+                <li><strong>\vec{AB} + \vec{BC}</strong> (Adds the two vectors AB and BC; requires A, B, C defined)</li>
+            </ul>
+            <div id="input_form">
+                <input type="text" id="vector_input" placeholder="Enter vector expression" />
+                <button id="add_vector_button">Add</button>
+            </div>
+            <div id="vectors_list"></div>
+        </div>
+
+        <div id="canvas_container"></div>
+
+        <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.js"></script>
+        <script>
+            let points_dict = {}
+            let vectors_list = []
+
+            let scale_factor = 50
+            let origin_x
+            let origin_y
+
+            function setup() {
+                let canvas = createCanvas(windowWidth - 300, windowHeight)
+                canvas.parent("canvas_container")
+            }
+
+            function windowResized() {
+                resizeCanvas(windowWidth - 300, windowHeight)
+            }
+
+            function draw() {
+                background(255)
+
+                origin_x = width / 2
+                origin_y = height / 2
+
+                // Draw axes
+                stroke(0)
+                strokeWeight(1)
+                line(0, origin_y, width, origin_y)
+                line(origin_x, 0, origin_x, height)
+
+                // Mark origin
+                fill(0)
+                noStroke()
+                circle(origin_x, origin_y, 5)
+
+                // Draw vectors
+                strokeWeight(2)
+                for (let i = 0; i < vectors_list.length; i++) {
+                    let vx = vectors_list[i].x
+                    let vy = vectors_list[i].y
+
+                    let start_x = origin_x
+                    let start_y = origin_y
+                    let end_x = origin_x + vx * scale_factor
+                    let end_y = origin_y - vy * scale_factor
+
+                    stroke(0, 0, 255)
+                    line(start_x, start_y, end_x, end_y)
+
+                    // Arrowhead
+                    push()
+                    translate(end_x, end_y)
+                    let angle = atan2(start_y - end_y, start_x - end_x)
+                    rotate(angle)
+                    stroke(0, 0, 255)
+                    fill(0, 0, 255)
+                    let arrow_size = 7
+                    line(0, 0, arrow_size, arrow_size / 2)
+                    line(0, 0, arrow_size, -arrow_size / 2)
+                    pop()
+                }
+
+                // Draw named points
+                textAlign(LEFT, CENTER)
+                textSize(14)
+                for (let label in points_dict) {
+                    let px = points_dict[label].x
+                    let py = points_dict[label].y
+
+                    // Convert to screen coordinates
+                    let screen_x = origin_x + px * scale_factor
+                    let screen_y = origin_y - py * scale_factor
+
+                    // Draw point
+                    fill(255, 0, 0)
+                    noStroke()
+                    circle(screen_x, screen_y, 8)
+
+                    // Draw label slightly offset
+                    fill(0)
+                    text(label, screen_x + 10, screen_y)
+                }
+            }
+
+            document.getElementById("add_vector_button").addEventListener("click", () => {
+                let input_str = document.getElementById("vector_input").value.trim()
+                if (!input_str) {
+                    return
+                }
+
+                parse_and_store(input_str)
+                display_vectors_list()
+                document.getElementById("vector_input").value = ""
+            })
+
+            function parse_and_store(input_str) {
+                if (input_str.includes("=")) {
+                    define_point(input_str)
+                } else {
+                    let vec = parse_vector_expression(input_str)
+                    if (vec) {
+                        vectors_list.push(vec)
+                    }
+                }
+            }
+
+            function define_point(def_str) {
+                let sides = def_str.split("=")
+                if (sides.length !== 2) {
+                    return
+                }
+                let label = sides[0].trim()
+                let vector_part = sides[1].trim()
+
+                let coords = parse_position_vector(vector_part)
+                if (coords) {
+                    points_dict[label] = { x: coords.x, y: coords.y }
+                }
+            }
+
+            function parse_position_vector(str) {
+                let s = str.toLowerCase().replace(/\s+/g, "")
+                let match = s.match(/([+-]?\d*\.?\d*)i([+-]\d*\.?\d*)j/)
+                if (!match) {
+                    return null
+                }
+
+                let x_str = match[1]
+                let y_str = match[2]
+
+                if (x_str === "" || x_str === "+") {
+                    x_str = "1"
+                } else if (x_str === "-") {
+                    x_str = "-1"
+                }
+                if (y_str === "" || y_str === "+") {
+                    y_str = "1"
+                } else if (y_str === "-") {
+                    y_str = "-1"
+                }
+
+                let x = parseFloat(x_str)
+                let y = parseFloat(y_str)
+
+                if (isNaN(x) || isNaN(y)) {
+                    return null
+                }
+                return { x, y }
+            }
+
+            function parse_vector_expression(expr) {
+                let terms = expr.split("+").map((x) => x.trim())
+                let total_x = 0
+                let total_y = 0
+
+                for (let i = 0; i < terms.length; i++) {
+                    let t = terms[i]
+                    let coords = parse_position_vector(t)
+                    if (coords) {
+                        total_x += coords.x
+                        total_y += coords.y
+                    } else {
+                        let vec_coords = parse_named_vector(t)
+                        if (!vec_coords) {
+                            return null
+                        }
+                        total_x += vec_coords.x
+                        total_y += vec_coords.y
+                    }
+                }
+
+                return { x: total_x, y: total_y }
+            }
+
+            function parse_named_vector(str) {
+                let s = str.replace(/\s+/g, "")
+                s = s.replace(/\\vec\{/g, "")
+                s = s.replace(/\}/g, "")
+
+                if (s.length < 2) {
+                    return null
+                }
+
+                let point_a_label = s.charAt(0)
+                let point_b_label = s.charAt(1)
+
+                if (!points_dict[point_a_label] || !points_dict[point_b_label]) {
+                    return null
+                }
+
+                let ax = points_dict[point_a_label].x
+                let ay = points_dict[point_a_label].y
+                let bx = points_dict[point_b_label].x
+                let by = points_dict[point_b_label].y
+
+                return { x: bx - ax, y: by - ay }
+            }
+
+            function display_vectors_list() {
+                let container = document.getElementById("vectors_list")
+                container.innerHTML = ""
+                for (let i = 0; i < vectors_list.length; i++) {
+                    let vx = vectors_list[i].x
+                    let vy = vectors_list[i].y
+                    let div = document.createElement("div")
+                    div.className = "vector_item"
+                    div.textContent = "Vector #" + (i + 1) + ": (" + vx + ", " + vy + ")"
+                    container.appendChild(div)
+                }
+            }
+        </script>
+    </body>
+</html>
