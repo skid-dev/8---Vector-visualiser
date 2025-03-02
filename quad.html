@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Always Parallelogram Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- p5.js from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+    <link rel="stylesheet" href="layouts/styles.css">
+    <link rel="stylesheet" href="layouts/triangle.css" />
+    
+    <script src="layouts/load_templates.js"></script>
+  </head>
+  <body>
+    <div id="nav_placeholder"></div>
+
+    <div class="container">
+      <!-- Explanatory Section -->
+      <div id="left_section">
+        <div class="input_section">
+          <h1>Parallelogram Demo</h1>
+          <p>
+            Drag points A, B, or C. The fourth point D is calculated so that
+            ABCD always forms a parallelogram.
+          </p>
+        </div>
+      </div>
+
+      <!-- Canvas Section -->
+      <div id="demo_wrapper">
+        <div id="p5_canvas_container"></div>
+      </div>
+    </div>
+
+    <div id="footer_placeholder"></div>
+
+    <script>
+      /**
+       * p5.js code
+       */
+
+      // A, B, and C are draggable
+      let A = { x: 150, y: 250 }
+      let B = { x: 300, y: 250 }
+      let C = { x: 350, y: 150 }
+
+      // D is computed so ABCD is always a parallelogram
+      let D = { x: 0, y: 0 }
+
+      let draggingPoint = null
+      let dragOffsetX = 0
+      let dragOffsetY = 0
+
+      function setup() {
+        let canvasContainer = document.getElementById("p5_canvas_container")
+        let renderer = createCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight)
+        renderer.parent("p5_canvas_container")
+        textSize(16)
+      }
+
+      function draw() {
+        background(255)
+        drawGrid()
+
+        // Calculate D so that AB and DC are the same vector
+        // Standard parallelogram relation: D = A + (C - B).
+        D.x = A.x + (C.x - B.x)
+        D.y = A.y + (C.y - B.y)
+
+        // Draw parallelogram edges
+        strokeWeight(2)
+        // Let's highlight vector pairs in two distinct colors:
+        // AB & DC in one color, BC & AD in another
+
+        // --- AB & DC in color #1 (blue) ---
+        stroke(0, 150, 255)
+        line(A.x, A.y, B.x, B.y) // AB
+        line(D.x, D.y, C.x, C.y) // DC
+
+        // --- BC & AD in color #2 (magenta) ---
+        stroke(255, 0, 150)
+        line(B.x, B.y, C.x, C.y) // BC
+        line(A.x, A.y, D.x, D.y) // AD
+
+        // Draw vector arrows (just small arrowheads near the ends)
+        drawArrow(A, B, color(0, 150, 255))
+        drawArrow(D, C, color(0, 150, 255))
+        drawArrow(B, C, color(255, 0, 150))
+        drawArrow(A, D, color(255, 0, 150))
+
+        // Draw draggable points A, B, C (D is not draggable)
+        noStroke()
+        fill(0)
+        drawLabeledPoint(A, "A")
+        drawLabeledPoint(B, "B")
+        drawLabeledPoint(C, "C")
+
+        // Draw D in a distinct color (since D isn't directly draggable)
+        fill(100)
+        drawLabeledPoint(D, "D")
+
+        // Some on-canvas text
+        fill(0)
+        text("Drag points A, B, or C to see ABCD remain a parallelogram.", 10, 20)
+        text("AB = DC and BC = AD by construction.", 10, 40)
+      }
+
+      /**********************************************************
+       * Utility functions
+       *********************************************************/
+
+      function drawArrow(startPt, endPt, arrowColor) {
+        // Simple arrow to illustrate vector direction
+        push()
+        stroke(arrowColor)
+        fill(arrowColor)
+        strokeWeight(2)
+
+        let vx = endPt.x - startPt.x
+        let vy = endPt.y - startPt.y
+        let angle = atan2(vy, vx)
+        let arrowLength = dist(startPt.x, startPt.y, endPt.x, endPt.y)
+
+        // Draw the main line
+        translate(startPt.x, startPt.y)
+        rotate(angle)
+        line(0, 0, arrowLength, 0)
+
+        // Draw arrowhead
+        let arrowSize = 8
+        translate(arrowLength, 0)
+        rotate(radians(150))
+        line(0, 0, arrowSize, 0)
+        rotate(radians(60))
+        line(0, 0, arrowSize, 0)
+
+        pop()
+      }
+
+      function drawLabeledPoint(pt, labelName) {
+        ellipse(pt.x, pt.y, 10, 10)
+        text(labelName, pt.x + 12, pt.y + 4)
+      }
+
+      function drawGrid() {
+        stroke(220)
+        strokeWeight(1)
+        let spacing = 50
+        for (let x = 0; x <= width; x += spacing) {
+          line(x, 0, x, height)
+        }
+        for (let y = 0; y <= height; y += spacing) {
+          line(0, y, width, y)
+        }
+      }
+
+      /**********************************************************
+       * Drag logic for A, B, C
+       *********************************************************/
+      function mousePressed() {
+        startDrag(mouseX, mouseY)
+      }
+
+      function mouseDragged() {
+        doDrag(mouseX, mouseY)
+      }
+
+      function mouseReleased() {
+        stopDrag()
+      }
+
+      function touchStarted() {
+        if (touches.length > 0) {
+          startDrag(touches[0].x, touches[0].y)
+        }
+        return false
+      }
+
+      function touchMoved() {
+        if (touches.length > 0) {
+          doDrag(touches[0].x, touches[0].y)
+        }
+        return false
+      }
+
+      function touchEnded() {
+        stopDrag()
+        return false
+      }
+
+      function startDrag(px, py) {
+        // Check proximity to A, B, C
+        if (dist(px, py, A.x, A.y) < 15) {
+          draggingPoint = A
+        } else if (dist(px, py, B.x, B.y) < 15) {
+          draggingPoint = B
+        } else if (dist(px, py, C.x, C.y) < 15) {
+          draggingPoint = C
+        }
+
+        if (draggingPoint) {
+          dragOffsetX = px - draggingPoint.x
+          dragOffsetY = py - draggingPoint.y
+        }
+      }
+
+      function doDrag(px, py) {
+        if (draggingPoint) {
+          draggingPoint.x = px - dragOffsetX
+          draggingPoint.y = py - dragOffsetY
+        }
+      }
+
+      function stopDrag() {
+        draggingPoint = null
+      }
+
+      function windowResized() {
+        let canvasContainer = document.getElementById("p5_canvas_container")
+        resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight)
+      }
+    </script>
+  </body>
+</html>

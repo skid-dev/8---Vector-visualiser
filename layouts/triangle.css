@@ -1,0 +1,58 @@
+/* Body had an extra property in the first file */
+body {
+  overflow: hidden; /* prevent scroll when canvas is large on mobile */
+}
+
+/* #left_section unique to first file */
+#left_section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* #left_section .input_section unique to first file */
+#left_section .input_section {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* #demo_wrapper unique to first file */
+#demo_wrapper {
+  flex-grow: 1;
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Additional widths for #left_section and #demo_wrapper at large screens */
+@media (min-width: 1100px) {
+  #left_section,
+  #demo_wrapper {
+    width: 50%;
+    flex: 0 0 50%;
+  }
+}
+
+/* p5 canvas container is only in the first file */
+#p5_canvas_container {
+  flex-grow: 1;
+  position: relative;
+}
+
+/* The first file’s button:hover / button:active */
+button:hover {
+  background-color: #3b78de;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}

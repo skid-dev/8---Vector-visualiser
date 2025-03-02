@@ -1,46 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
-        <meta charset="utf-8" />
-        <!-- 
-    Make page responsive on mobile:
-    - width=device-width forces the screen to match device width
-    - user-scalable=no disables pinch-zoom (optional)
-  -->
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-        <title>Midpoint Parallel Demo (Mobile Friendly)</title>
+        <meta charset="UTF-8" />
+        <title>Midpoint Parallel Demo</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
         <!-- p5.js library from a CDN -->
         <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
 
-        <style>
-            /* Ensure the canvas fills the screen and that touch events don't scroll the page */
-            html,
-            body {
-                margin: 0;
-                padding: 0;
-                overflow: hidden; /* Prevents scrolling on mobile */
-                touch-action: none; /* Disables default gestures like scrolling, pinch-zoom */
-                user-select: none; /* Prevents text selection on mobile */
-            }
-        </style>
+        <link rel="stylesheet" href="layouts/styles.css">
+        <link rel="stylesheet" href="layouts/triangle.css" />
     </head>
     <body>
-        <script>
-            // =======================================================
-            // This sketch lets you drag the triangle's points (A, B, C)
-            // with your mouse or finger. The line MN (where M and N
-            // are midpoints of AC and AB, respectively) will remain
-            // parallel to BC. The cross product of BC and MN will be
-            // 0 (or extremely close to 0 due to floating point precision),
-            // and MN should be exactly half as long as BC in magnitude.
-            // =======================================================
+        <div id="nav_placeholder"></div>
 
-            // Each point is an object { x, y } in 2D
+        <div class="container">
+            <!-- Left section with an introduction to the geometric proof -->
+            <div id="left_section">
+                <div class="input_section">
+                    <h1>Geometric Proof: Midpoint Parallel Demo</h1>
+                    <p>
+                        Click and drag points A, B and C to change the shape of the triangle.
+                        M is the midpoint of AC and N is the midpoint of AB.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right section holding the p5 canvas -->
+            <div id="demo_wrapper">
+                <div id="p5_canvas_container"></div>
+            </div>
+        </div>
+
+        <div id="footer_placeholder"></div>
+
+        <script src="layouts/load_templates.js"></script>
+
+        <script>
+            /*
+      p5.js code with snake_case and a faint grid in the background
+    */
+
             let point_a = { x: 100, y: 300 }
             let point_b = { x: 300, y: 200 }
             let point_c = { x: 250, y: 100 }
 
-            // For dragging logic
             let dragging_point = null
             let drag_offset_x = 0
             let drag_offset_y = 0
@@ -59,7 +63,6 @@
                 }
             }
 
-            // 2D cross product: (u.x * v.y - u.y * v.x)
             function cross_product(u, v) {
                 return u.x * v.y - u.y * v.x
             }
@@ -68,36 +71,32 @@
                 return Math.sqrt(v.x * v.x + v.y * v.y)
             }
 
-            // p5.js setup
             function setup() {
-                createCanvas(windowWidth, windowHeight)
+                let canvas_container = document.getElementById("p5_canvas_container")
+                let renderer = createCanvas(canvas_container.offsetWidth, canvas_container.offsetHeight)
+                renderer.parent("p5_canvas_container")
                 textSize(16)
             }
 
-            // p5.js draw
             function draw() {
                 background(255)
+                draw_grid()
 
-                // Instructions
                 fill(0)
                 text("Drag (touch) points A, B, or C to move them", 10, 20)
 
-                // Compute midpoints M (AC) and N (AB)
                 let point_m = get_midpoint(point_a, point_c)
                 let point_n = get_midpoint(point_a, point_b)
 
-                // Draw triangle ABC
                 strokeWeight(2)
                 stroke(0, 150, 255)
                 line(point_a.x, point_a.y, point_b.x, point_b.y)
                 line(point_b.x, point_b.y, point_c.x, point_c.y)
                 line(point_c.x, point_c.y, point_a.x, point_a.y)
 
-                // Draw segment MN
                 stroke(255, 0, 150)
                 line(point_m.x, point_m.y, point_n.x, point_n.y)
 
-                // Draw points A, B, C
                 noStroke()
                 fill(0)
                 ellipse(point_a.x, point_a.y, 10, 10)
@@ -109,7 +108,6 @@
                 ellipse(point_c.x, point_c.y, 10, 10)
                 text("C", point_c.x + 12, point_c.y)
 
-                // Draw midpoints M, N
                 fill(255, 0, 150)
                 ellipse(point_m.x, point_m.y, 10, 10)
                 text("M", point_m.x + 12, point_m.y)
@@ -117,12 +115,10 @@
                 ellipse(point_n.x, point_n.y, 10, 10)
                 text("N", point_n.x + 12, point_n.y)
 
-                // Check the parallel condition (cross product)
                 let vector_bc = get_vector(point_b, point_c)
                 let vector_mn = get_vector(point_m, point_n)
                 let cross_bc_mn = cross_product(vector_bc, vector_mn)
 
-                // Ratio of lengths MN : BC
                 let magnitude_bc = get_magnitude(vector_bc)
                 let magnitude_mn = get_magnitude(vector_mn)
                 let ratio = magnitude_mn / magnitude_bc
@@ -141,11 +137,58 @@
                 text("(Should be ~0.5 for midpoints)", 10, 150)
             }
 
-            // =======================================================
-            // Unified handling for both mouse and touch
-            // =======================================================
+            /*
+      Draws a faint grid in the background.
+      Adjust 'spacing' or stroke color as desired.
+    */
+            function draw_grid() {
+                stroke(220)
+                strokeWeight(1)
+                let spacing = 50
 
-            // Called once when mouse or touch starts
+                // Vertical lines
+                for (let x = 0; x <= width; x += spacing) {
+                    line(x, 0, x, height)
+                }
+
+                // Horizontal lines
+                for (let y = 0; y <= height; y += spacing) {
+                    line(0, y, width, y)
+                }
+            }
+
+            // Mouse / touch drag logic
+            function mousePressed() {
+                start_drag(mouseX, mouseY)
+            }
+
+            function mouseDragged() {
+                do_drag(mouseX, mouseY)
+            }
+
+            function mouseReleased() {
+                stop_drag()
+            }
+
+            function touchStarted() {
+                if (touches.length > 0) {
+                    start_drag(touches[0].x, touches[0].y)
+                }
+                return false
+            }
+
+            function touchMoved() {
+                if (touches.length > 0) {
+                    do_drag(touches[0].x, touches[0].y)
+                }
+                return false
+            }
+
+            function touchEnded() {
+                stop_drag()
+                return false
+            }
+
             function start_drag(px, py) {
                 if (dist(px, py, point_a.x, point_a.y) < 15) {
                     dragging_point = point_a
@@ -154,7 +197,6 @@
                 } else if (dist(px, py, point_c.x, point_c.y) < 15) {
                     dragging_point = point_c
                 }
-
                 if (dragging_point) {
                     drag_offset_x = px - dragging_point.x
                     drag_offset_y = py - dragging_point.y
@@ -172,42 +214,9 @@
                 dragging_point = null
             }
 
-            // p5 mouse events
-            function mousePressed() {
-                start_drag(mouseX, mouseY)
-            }
-            function mouseDragged() {
-                do_drag(mouseX, mouseY)
-            }
-            function mouseReleased() {
-                stop_drag()
-            }
-
-            // p5 touch events (mobile)
-            function touchStarted() {
-                // Single-touch only — use first touch
-                if (touches.length > 0) {
-                    start_drag(touches[0].x, touches[0].y)
-                }
-                // Prevent default scrolling
-                return false
-            }
-            function touchMoved() {
-                if (touches.length > 0) {
-                    do_drag(touches[0].x, touches[0].y)
-                }
-                // Prevent default scrolling
-                return false
-            }
-            function touchEnded() {
-                stop_drag()
-                // Prevent default scrolling
-                return false
-            }
-
-            // p5.js function that resizes the canvas on window resize
             function windowResized() {
-                resizeCanvas(windowWidth, windowHeight)
+                let canvas_container = document.getElementById("p5_canvas_container")
+                resizeCanvas(canvas_container.offsetWidth, canvas_container.offsetHeight)
             }
         </script>
     </body>

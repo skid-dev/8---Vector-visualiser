@@ -1,0 +1,118 @@
+/* triangle.css: Unique rules from the second stylesheet */
+
+/* Extra base-level .container properties only in second file */
+.container {
+  /* Both had display: block in the base, but #2 also sets: */
+  flex-direction: row;
+  gap: 1rem;
+}
+
+/* Additional media query specifics from second file */
+@media (min-width: 1100px) {
+  .container {
+    /* #2 repeats some base container properties here. */
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    flex-grow: 1;
+  }
+  #left-section,
+  #plot-wrapper {
+    width: 50%;
+    flex: 0 0 50%;
+  }
+}
+
+/* #left-section only in second file */
+#left-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* .input-section only in second file */
+.input-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  background: #fff;
+  padding: 1rem;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* .input-group only in second file */
+.input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.input-group input {
+  padding: 0.5rem;
+  width: 5rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+/* Fancy equation section only in second file */
+.equation-section {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.equation-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.equation-content {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #444;
+}
+
+/* #plot and #plot-wrapper only in second file */
+#plot {
+  width: 100%;
+  height: 60vh; /* originally in #2 */
+  /* Then #2 also changed it to height: 100% — you can choose one approach. */
+  height: 100%;
+}
+
+#plot-wrapper {
+  flex-grow: 1;
+  background: #fff;
+  padding: 1rem;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Second file had more elaborate button hover/active states */
+button:hover {
+  background-color: #3666b0;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25), 0 0 8px rgba(78, 156, 255, 0.3);
+  transform: translateY(-3px) scale(1.03);
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+/*
+  #2 also repeated a second hover rule with background-color: #3b78de.
+  If you want that final color, you could override or unify it here.
+*/
+
+button:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}

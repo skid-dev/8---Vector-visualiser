@@ -1,0 +1,127 @@
+/* styles.css: Shared (identical) styles from both files */
+
+/* Reset / Base */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Body */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Container */
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    flex-grow: 1;
+    /* Both had 'display: block' at the base level */
+    display: block;
+}
+
+/* Media Query for smaller screens (common h1 style) */
+@media (max-width: 600px) {
+    h1 {
+        font-size: 1.2rem;
+    }
+}
+
+/* Headings */
+h1 {
+    font-size: 1.5rem;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Button (base rules + focus) */
+button {
+    padding: 0.6rem 1.2rem;
+    background-color: #2c5aa0;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+button:focus {
+    outline: 2px solid rgba(74, 134, 232, 0.5);
+    outline-offset: 2px;
+}
+
+/* nav styles */
+nav {
+    background-color: #2c5aa0;
+    color: white;
+    padding: 0.5rem 0;
+}
+
+#nav_placeholder {
+    height: 50px; /* Placeholder height */
+    background-color: #2c5aa0;
+}
+
+#nav-wrapper {
+    background-color: #2c5aa0;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    height: 35px;
+
+    margin: 0 auto; /* Center the nav in the container */
+}
+
+/* Additional styling for nav items */
+.nav-left p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.nav-right select {
+    padding: 0.3rem;
+    font-size: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    padding-right: 2rem;
+    border-radius: 4px;
+}
+
+/* Common responsive container styling at large widths */
+@media (min-width: 1100px) {
+    .container {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+    }
+}
