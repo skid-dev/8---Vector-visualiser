@@ -18,6 +18,7 @@ const nav_html = `
         <option data-page="projections.html" value="projections">Vector projections</option>
         <option data-page="triangle.html" value="triangle">Triangle geometric proof</option>
         <option data-page="quad.html" value="quad">Quadrilateral geometric proof</option>
+        <option data-page="playground.html" value="playground">Vector playground</option>
       </select>
     </div>
   </div>
