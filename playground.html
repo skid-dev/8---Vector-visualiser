@@ -2,8 +2,9 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>Vector Visualizer</title>
+        <title>Auto‐Scaling Vector Visualizer with Validation</title>
         <style>
+            /* Remember to use semicolons in CSS */
             body {
                 margin: 0;
                 padding: 0;
@@ -27,19 +28,33 @@
             #vector_input {
                 flex: 1;
             }
-            #vectors_list {
+            #error_box {
+                min-height: 20px;
+                color: red;
+                font-size: 0.9em;
+                margin-top: 5px;
+            }
+            #items_list {
                 margin-top: 10px;
             }
             #canvas_container {
                 flex: 1;
             }
-            .vector_item {
+            .item_entry {
                 margin: 5px 0;
                 padding: 5px;
                 background: #ffffff;
                 border: 1px solid #ccc;
                 border-radius: 3px;
                 word-break: break-all;
+            }
+            .item_title {
+                font-weight: bold;
+                margin-bottom: 3px;
+            }
+            .segment_description {
+                margin-left: 10px;
+                font-style: italic;
             }
         </style>
     </head>
@@ -48,25 +63,46 @@
             <h3>Vector Visualizer</h3>
             <p>Examples of valid inputs:</p>
             <ul>
-                <li><strong>A = 2i + 3j</strong> (Defines point A at coordinates (2,3))</li>
-                <li><strong>2i + 3j</strong> (Adds a vector from origin (0,0) to (2,3))</li>
-                <li><strong>\vec{AB}</strong> (Adds a vector from point A to point B, if both are defined)</li>
-                <li><strong>\vec{AB} + \vec{BC}</strong> (Adds the two vectors AB and BC; requires A, B, C defined)</li>
+                <li><strong>A = 3i + 4j</strong> (Define point A at (3,4))</li>
+                <li><strong>B = -3i + 4j</strong> (Define point B at (-3,4))</li>
+                <li><strong>\vec{AB}</strong> (Vector from A to B)</li>
+                <li><strong>\vec{AB} + \vec{BC}</strong> (Draw vectors A→B and B→C tip-to-tail, plus final A→C)</li>
+                <li><strong>2i + 3j + 4i - 1j</strong> (Multiple position vectors tip-to-tail, plus final sum)</li>
             </ul>
             <div id="input_form">
-                <input type="text" id="vector_input" placeholder="Enter vector expression" />
+                <input type="text" id="vector_input" placeholder="Enter expression" />
                 <button id="add_vector_button">Add</button>
             </div>
-            <div id="vectors_list"></div>
+            <!-- Box for error messages -->
+            <div id="error_box"></div>
+
+            <div id="items_list"></div>
         </div>
 
         <div id="canvas_container"></div>
 
         <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.js"></script>
         <script>
-            let points_dict = {}
-            let vectors_list = []
+            // ---------------------------------------------------------
+            // Global data
+            // ---------------------------------------------------------
+            let points_dict = {} // e.g. { A: {x: 3, y: 4}, B: {x: -3, y: 4} }
+            let items = [] // array of "point" or "vectorExp" objects
 
+            // color cycling
+            let color_array = [
+                "#e6194b", // red
+                "#3cb44b", // green
+                "#0082c8", // blue
+                "#f58231", // orange
+                "#911eb4", // purple
+                "#46f0f0", // cyan
+                "#f032e6", // magenta
+                "#ffe119", // yellow
+            ]
+            let color_index = 0
+
+            // p5 drawing variables
             let scale_factor = 50
             let origin_x
             let origin_y
@@ -74,6 +110,19 @@
             function setup() {
                 let canvas = createCanvas(windowWidth - 300, windowHeight)
                 canvas.parent("canvas_container")
+
+                // Press Enter to add expression if valid
+                let input = document.getElementById("vector_input")
+                input.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter") {
+                        add_expression_if_valid()
+                    }
+                })
+
+                // As user types, validate expression in real-time
+                input.addEventListener("input", () => {
+                    validate_current_input()
+                })
             }
 
             function windowResized() {
@@ -83,193 +132,513 @@
             function draw() {
                 background(255)
 
-                origin_x = width / 2
-                origin_y = height / 2
-
-                // Draw axes
-                stroke(0)
-                strokeWeight(1)
-                line(0, origin_y, width, origin_y)
-                line(origin_x, 0, origin_x, height)
-
-                // Mark origin
-                fill(0)
-                noStroke()
-                circle(origin_x, origin_y, 5)
-
-                // Draw vectors
-                strokeWeight(2)
-                for (let i = 0; i < vectors_list.length; i++) {
-                    let vx = vectors_list[i].x
-                    let vy = vectors_list[i].y
-
-                    let start_x = origin_x
-                    let start_y = origin_y
-                    let end_x = origin_x + vx * scale_factor
-                    let end_y = origin_y - vy * scale_factor
-
-                    stroke(0, 0, 255)
-                    line(start_x, start_y, end_x, end_y)
-
-                    // Arrowhead
-                    push()
-                    translate(end_x, end_y)
-                    let angle = atan2(start_y - end_y, start_x - end_x)
-                    rotate(angle)
-                    stroke(0, 0, 255)
-                    fill(0, 0, 255)
-                    let arrow_size = 7
-                    line(0, 0, arrow_size, arrow_size / 2)
-                    line(0, 0, arrow_size, -arrow_size / 2)
-                    pop()
-                }
-
-                // Draw named points
-                textAlign(LEFT, CENTER)
-                textSize(14)
-                for (let label in points_dict) {
-                    let px = points_dict[label].x
-                    let py = points_dict[label].y
-
-                    // Convert to screen coordinates
-                    let screen_x = origin_x + px * scale_factor
-                    let screen_y = origin_y - py * scale_factor
-
-                    // Draw point
-                    fill(255, 0, 0)
-                    noStroke()
-                    circle(screen_x, screen_y, 8)
-
-                    // Draw label slightly offset
-                    fill(0)
-                    text(label, screen_x + 10, screen_y)
-                }
+                // 1) compute bounding box of all items
+                let bbox = compute_bounding_box()
+                // 2) setup scale/origin so everything fits
+                setup_view(bbox)
+                // 3) draw grid
+                draw_grid(bbox)
+                // 4) axes
+                draw_axes()
+                // 5) axis labels
+                draw_axis_labels(bbox)
+                // 6) draw items
+                draw_items()
             }
 
-            document.getElementById("add_vector_button").addEventListener("click", () => {
+            // ---------------------------------------------------------
+            // Input / Validation
+            // ---------------------------------------------------------
+            document.getElementById("add_vector_button").addEventListener("click", add_expression_if_valid)
+
+            function add_expression_if_valid() {
+                // If there's an error, do nothing
+                let error_msg = validate_current_input()
+                if (error_msg) return
+
                 let input_str = document.getElementById("vector_input").value.trim()
-                if (!input_str) {
-                    return
-                }
+                if (!input_str) return
 
                 parse_and_store(input_str)
-                display_vectors_list()
+                render_items_list()
                 document.getElementById("vector_input").value = ""
-            })
+                document.getElementById("error_box").textContent = ""
+                validate_current_input()
+            }
 
+            // This function returns an error message if invalid, else null
+            function validate_current_input() {
+                let input_str = document.getElementById("vector_input").value.trim()
+                let error_box = document.getElementById("error_box")
+                let add_button = document.getElementById("add_vector_button")
+
+                // If empty, no error (but user can't add)
+                if (!input_str) {
+                    error_box.textContent = ""
+                    add_button.disabled = true
+                    return "Empty"
+                }
+
+                let error_msg = test_parse_expression(input_str)
+                if (error_msg) {
+                    error_box.textContent = error_msg
+                    add_button.disabled = true
+                } else {
+                    error_box.textContent = ""
+                    add_button.disabled = false
+                }
+                return error_msg
+            }
+
+            // test_parse_expression tries to parse the expression
+            // returns null if no error, or a string describing the error
+            function test_parse_expression(expr_str) {
+                // If there's '=', treat it as a point definition
+                if (expr_str.includes("=")) {
+                    let result = test_parse_point(expr_str)
+                    return result // either null or error string
+                }
+                // else treat as vector expression
+                let result = test_parse_vector_expr(expr_str)
+                return result
+            }
+
+            // Attempt to parse a point definition "A = 2i + 3j"
+            // returns null if valid, or an error string if invalid
+            function test_parse_point(def_str) {
+                let parts = def_str.split("=")
+                if (parts.length !== 2) {
+                    return "Invalid point definition (use A = 2i + 3j)"
+                }
+                let label = parts[0].trim()
+                if (!label) {
+                    return "Missing point label"
+                }
+                let coords_str = parts[1].trim()
+                let coords = parse_position_vector(coords_str)
+                if (!coords) {
+                    return "Invalid coordinates for point"
+                }
+                return null
+            }
+
+            // Attempt to parse a vector expression
+            function test_parse_vector_expr(expr) {
+                let terms = expr.split("+").map((t) => t.trim())
+                if (terms.length === 0) {
+                    return "No valid expression"
+                }
+                for (let t of terms) {
+                    let check = test_parse_vector_term(t)
+                    if (check) return check // return error
+                }
+                return null
+            }
+
+            // Each term can be \vec{AB} or "2i+3j"
+            function test_parse_vector_term(term_str) {
+                // check if it's a named vector
+                let named = parse_named_vector(term_str)
+                if (named) {
+                    // but ensure the named points actually exist
+                    if (!points_dict[named.point_a_label]) {
+                        return `Point "${named.point_a_label}" is not defined`
+                    }
+                    if (!points_dict[named.point_b_label]) {
+                        return `Point "${named.point_b_label}" is not defined`
+                    }
+                    return null
+                }
+                // else try position vector
+                let coords = parse_position_vector(term_str)
+                if (coords) {
+                    return null
+                }
+                return `Unable to parse "${term_str}"`
+            }
+
+            // ---------------------------------------------------------
+            // parse_and_store (called when expression is valid)
+            // ---------------------------------------------------------
             function parse_and_store(input_str) {
                 if (input_str.includes("=")) {
-                    define_point(input_str)
+                    define_point_item(input_str)
                 } else {
-                    let vec = parse_vector_expression(input_str)
-                    if (vec) {
-                        vectors_list.push(vec)
+                    let vector_item = parse_vector_expression(input_str)
+                    if (vector_item) {
+                        items.push(vector_item)
                     }
                 }
             }
 
-            function define_point(def_str) {
-                let sides = def_str.split("=")
-                if (sides.length !== 2) {
-                    return
-                }
-                let label = sides[0].trim()
-                let vector_part = sides[1].trim()
-
-                let coords = parse_position_vector(vector_part)
-                if (coords) {
-                    points_dict[label] = { x: coords.x, y: coords.y }
-                }
+            // define a point (already validated)
+            function define_point_item(def_str) {
+                let parts = def_str.split("=")
+                let label = parts[0].trim()
+                let coords = parse_position_vector(parts[1].trim())
+                points_dict[label] = { x: coords.x, y: coords.y }
+                items.push({
+                    type: "point",
+                    label: label,
+                    x: coords.x,
+                    y: coords.y,
+                })
             }
 
-            function parse_position_vector(str) {
-                let s = str.toLowerCase().replace(/\s+/g, "")
-                let match = s.match(/([+-]?\d*\.?\d*)i([+-]\d*\.?\d*)j/)
-                if (!match) {
-                    return null
-                }
-
-                let x_str = match[1]
-                let y_str = match[2]
-
-                if (x_str === "" || x_str === "+") {
-                    x_str = "1"
-                } else if (x_str === "-") {
-                    x_str = "-1"
-                }
-                if (y_str === "" || y_str === "+") {
-                    y_str = "1"
-                } else if (y_str === "-") {
-                    y_str = "-1"
-                }
-
-                let x = parseFloat(x_str)
-                let y = parseFloat(y_str)
-
-                if (isNaN(x) || isNaN(y)) {
-                    return null
-                }
-                return { x, y }
-            }
-
+            // parse_vector_expression (already validated)
             function parse_vector_expression(expr) {
-                let terms = expr.split("+").map((x) => x.trim())
-                let total_x = 0
-                let total_y = 0
+                let item = {
+                    type: "vectorExp",
+                    expression: expr,
+                    segments: [],
+                }
+                let terms = expr.split("+").map((t) => t.trim())
+                if (terms.length === 0) return null
 
-                for (let i = 0; i < terms.length; i++) {
-                    let t = terms[i]
-                    let coords = parse_position_vector(t)
-                    if (coords) {
-                        total_x += coords.x
-                        total_y += coords.y
-                    } else {
-                        let vec_coords = parse_named_vector(t)
-                        if (!vec_coords) {
-                            return null
-                        }
-                        total_x += vec_coords.x
-                        total_y += vec_coords.y
-                    }
+                // parse each term => { dx, dy, start_coords, end_coords, label }
+                let parsed_terms = []
+                for (let t of terms) {
+                    let info = parse_vector_term_info(t)
+                    if (!info) return null
+                    parsed_terms.push(info)
                 }
 
-                return { x: total_x, y: total_y }
+                if (parsed_terms.length === 1) {
+                    // single
+                    let single = parsed_terms[0]
+                    item.segments.push({
+                        sx: single.start_coords.x,
+                        sy: single.start_coords.y,
+                        ex: single.end_coords.x,
+                        ey: single.end_coords.y,
+                        color: get_next_color(),
+                        label: single.label,
+                    })
+                } else {
+                    // sum => tip-to-tail
+                    let first = parsed_terms[0]
+                    let start_of_sum_x = first.start_coords.x
+                    let start_of_sum_y = first.start_coords.y
+
+                    let cx = start_of_sum_x
+                    let cy = start_of_sum_y
+
+                    for (let p of parsed_terms) {
+                        let new_sx = cx
+                        let new_sy = cy
+                        let new_ex = cx + p.dx
+                        let new_ey = cy + p.dy
+                        item.segments.push({
+                            sx: new_sx,
+                            sy: new_sy,
+                            ex: new_ex,
+                            ey: new_ey,
+                            color: get_next_color(),
+                            label: p.label,
+                        })
+                        cx = new_ex
+                        cy = new_ey
+                    }
+                    // final sum
+                    item.segments.push({
+                        sx: start_of_sum_x,
+                        sy: start_of_sum_y,
+                        ex: cx,
+                        ey: cy,
+                        color: get_next_color(),
+                        label: "Sum",
+                    })
+                }
+                return item
             }
 
+            // parse_vector_term_info => named or position vector
+            function parse_vector_term_info(term_str) {
+                let named = parse_named_vector(term_str)
+                if (named) {
+                    let dx = named.bx - named.ax
+                    let dy = named.by - named.ay
+                    return {
+                        dx: dx,
+                        dy: dy,
+                        start_coords: { x: named.ax, y: named.ay },
+                        end_coords: { x: named.bx, y: named.by },
+                        label: named.label,
+                    }
+                }
+                let coords = parse_position_vector(term_str)
+                if (coords) {
+                    return {
+                        dx: coords.x,
+                        dy: coords.y,
+                        start_coords: { x: 0, y: 0 },
+                        end_coords: { x: coords.x, y: coords.y },
+                        label: term_str,
+                    }
+                }
+                return null
+            }
+
+            // parse_named_vector("\vec{AB}")
             function parse_named_vector(str) {
                 let s = str.replace(/\s+/g, "")
                 s = s.replace(/\\vec\{/g, "")
                 s = s.replace(/\}/g, "")
 
-                if (s.length < 2) {
-                    return null
-                }
-
+                if (s.length < 2) return null
                 let point_a_label = s.charAt(0)
                 let point_b_label = s.charAt(1)
 
+                // We return the raw labels too for the validation function
                 if (!points_dict[point_a_label] || !points_dict[point_b_label]) {
-                    return null
+                    // Might be undefined now, we rely on validation to catch it
                 }
 
-                let ax = points_dict[point_a_label].x
-                let ay = points_dict[point_a_label].y
-                let bx = points_dict[point_b_label].x
-                let by = points_dict[point_b_label].y
-
-                return { x: bx - ax, y: by - ay }
+                return {
+                    ax: points_dict[point_a_label] ? points_dict[point_a_label].x : 0,
+                    ay: points_dict[point_a_label] ? points_dict[point_a_label].y : 0,
+                    bx: points_dict[point_b_label] ? points_dict[point_b_label].x : 0,
+                    by: points_dict[point_b_label] ? points_dict[point_b_label].y : 0,
+                    point_a_label: point_a_label,
+                    point_b_label: point_b_label,
+                    label: "\\vec{" + point_a_label + point_b_label + "}",
+                }
             }
 
-            function display_vectors_list() {
-                let container = document.getElementById("vectors_list")
+            // parse_position_vector("2i + 3j") => { x:2, y:3 }
+            function parse_position_vector(str) {
+                let s = str.toLowerCase().replace(/\s+/g, "")
+                let match = s.match(/([+-]?\d*\.?\d*)i([+-]\d*\.?\d*)j/)
+                if (!match) return null
+
+                let x_str = match[1]
+                let y_str = match[2]
+                if (x_str === "" || x_str === "+") x_str = "1"
+                else if (x_str === "-") x_str = "-1"
+                if (y_str === "" || y_str === "+") y_str = "1"
+                else if (y_str === "-") y_str = "-1"
+
+                let x = parseFloat(x_str)
+                let y = parseFloat(y_str)
+                if (isNaN(x) || isNaN(y)) return null
+                return { x, y }
+            }
+
+            // ---------------------------------------------------------
+            // color cycling
+            // ---------------------------------------------------------
+            function get_next_color() {
+                let c = color_array[color_index % color_array.length]
+                color_index++
+                return c
+            }
+
+            // ---------------------------------------------------------
+            // bounding box of all items
+            // ---------------------------------------------------------
+            function compute_bounding_box() {
+                if (items.length === 0) {
+                    return { min_x: -1, max_x: 1, min_y: -1, max_y: 1 }
+                }
+                let min_x = Infinity,
+                    max_x = -Infinity
+                let min_y = Infinity,
+                    max_y = -Infinity
+
+                for (let item of items) {
+                    if (item.type === "point") {
+                        let x = item.x
+                        let y = item.y
+                        if (x < min_x) min_x = x
+                        if (x > max_x) max_x = x
+                        if (y < min_y) min_y = y
+                        if (y > max_y) max_y = y
+                    } else if (item.type === "vectorExp") {
+                        for (let seg of item.segments) {
+                            let vx1 = seg.sx
+                            let vy1 = seg.sy
+                            let vx2 = seg.ex
+                            let vy2 = seg.ey
+                            if (vx1 < min_x) min_x = vx1
+                            if (vx1 > max_x) max_x = vx1
+                            if (vy1 < min_y) min_y = vy1
+                            if (vy1 > max_y) max_y = vy1
+
+                            if (vx2 < min_x) min_x = vx2
+                            if (vx2 > max_x) max_x = vx2
+                            if (vy2 < min_y) min_y = vy2
+                            if (vy2 > max_y) max_y = vy2
+                        }
+                    }
+                }
+                if (min_x === Infinity || max_x === -Infinity) {
+                    return { min_x: -1, max_x: 1, min_y: -1, max_y: 1 }
+                }
+                return { min_x, max_x, min_y, max_y }
+            }
+
+            // setup_view => compute scale_factor & origin so bbox fits
+            function setup_view(bbox) {
+                let w = width
+                let h = height
+                let margin = 40
+
+                let bb_width = bbox.max_x - bbox.min_x
+                let bb_height = bbox.max_y - bbox.min_y
+
+                if (bb_width < 0.0001) bb_width = 1
+                if (bb_height < 0.0001) bb_height = 1
+
+                let scale_x = (w - 2 * margin) / bb_width
+                let scale_y = (h - 2 * margin) / bb_height
+                let new_scale = Math.min(scale_x, scale_y)
+                if (!isFinite(new_scale) || new_scale <= 0) new_scale = 50
+                scale_factor = new_scale
+
+                let center_x = (bbox.min_x + bbox.max_x) / 2
+                let center_y = (bbox.min_y + bbox.max_y) / 2
+                origin_x = w / 2 - center_x * scale_factor
+                origin_y = h / 2 + center_y * scale_factor
+            }
+
+            // draw_grid => faint integer grid lines
+            function draw_grid(bbox) {
+                stroke(220)
+                strokeWeight(1)
+                noFill()
+
+                let min_xi = Math.floor(bbox.min_x)
+                let max_xi = Math.ceil(bbox.max_x)
+                let min_yi = Math.floor(bbox.min_y)
+                let max_yi = Math.ceil(bbox.max_y)
+
+                for (let gx = min_xi; gx <= max_xi; gx++) {
+                    let sx = origin_x + gx * scale_factor
+                    let sy1 = origin_y - min_yi * scale_factor
+                    let sy2 = origin_y - max_yi * scale_factor
+                    line(sx, sy1, sx, sy2)
+                }
+                for (let gy = min_yi; gy <= max_yi; gy++) {
+                    let sy = origin_y - gy * scale_factor
+                    let sx1 = origin_x + min_xi * scale_factor
+                    let sx2 = origin_x + max_xi * scale_factor
+                    line(sx1, sy, sx2, sy)
+                }
+            }
+
+            // draw_axes => bold x- and y- axes
+            function draw_axes() {
+                stroke(0)
+                strokeWeight(2)
+                line(0, origin_y, width, origin_y) // x-axis
+                line(origin_x, 0, origin_x, height) // y-axis
+            }
+
+            // draw_axis_labels => "X" and "Y" near positive directions
+            function draw_axis_labels(bbox) {
+                fill(0)
+                noStroke()
+                textSize(16)
+                textAlign(CENTER, CENTER)
+
+                let label_x = bbox.max_x > 0 ? bbox.max_x : bbox.min_x
+                let px = origin_x + label_x * scale_factor + 30
+                let py = origin_y
+                text("X", px, py)
+
+                let label_y = bbox.max_y > 0 ? bbox.max_y : bbox.min_y
+                let qx = origin_x
+                let qy = origin_y - label_y * scale_factor - 20
+                text("Y", qx, qy)
+            }
+
+            // draw_items => points + vectors
+            function draw_items() {
+                for (let item of items) {
+                    if (item.type === "point") {
+                        draw_point_item(item)
+                    } else if (item.type === "vectorExp") {
+                        draw_vector_exp_item(item)
+                    }
+                }
+            }
+
+            function draw_point_item(item) {
+                let sx = origin_x + item.x * scale_factor
+                let sy = origin_y - item.y * scale_factor
+                fill(255, 0, 0)
+                noStroke()
+                circle(sx, sy, 8)
+
+                fill(0)
+                textSize(14)
+                textAlign(LEFT, CENTER)
+                text(item.label, sx + 10, sy)
+            }
+
+            function draw_vector_exp_item(item) {
+                for (let seg of item.segments) {
+                    let sx = origin_x + seg.sx * scale_factor
+                    let sy = origin_y - seg.sy * scale_factor
+                    let ex = origin_x + seg.ex * scale_factor
+                    let ey = origin_y - seg.ey * scale_factor
+
+                    stroke(seg.color)
+                    strokeWeight(2)
+                    line(sx, sy, ex, ey)
+
+                    // arrowhead
+                    push()
+                    translate(ex, ey)
+                    let angle = atan2(sy - ey, sx - ex)
+                    rotate(angle)
+                    stroke(seg.color)
+                    fill(seg.color)
+                    let arrow_size = 7
+                    line(0, 0, arrow_size, arrow_size / 2)
+                    line(0, 0, arrow_size, -arrow_size / 2)
+                    pop()
+                }
+            }
+
+            // ---------------------------------------------------------
+            // Render the sidebar
+            // ---------------------------------------------------------
+            function render_items_list() {
+                let container = document.getElementById("items_list")
                 container.innerHTML = ""
-                for (let i = 0; i < vectors_list.length; i++) {
-                    let vx = vectors_list[i].x
-                    let vy = vectors_list[i].y
-                    let div = document.createElement("div")
-                    div.className = "vector_item"
-                    div.textContent = "Vector #" + (i + 1) + ": (" + vx + ", " + vy + ")"
-                    container.appendChild(div)
+
+                for (let item of items) {
+                    let entry = document.createElement("div")
+                    entry.className = "item_entry"
+
+                    if (item.type === "point") {
+                        let title = document.createElement("div")
+                        title.className = "item_title"
+                        title.textContent = "Point " + item.label
+                        entry.appendChild(title)
+
+                        let info = document.createElement("div")
+                        info.textContent = `Coordinates: (${item.x}, ${item.y})`
+                        entry.appendChild(info)
+                    } else if (item.type === "vectorExp") {
+                        let title = document.createElement("div")
+                        title.className = "item_title"
+                        title.textContent = "Vector Expression: " + item.expression
+                        entry.appendChild(title)
+
+                        let idx = 1
+                        for (let seg of item.segments) {
+                            let seg_desc = document.createElement("div")
+                            seg_desc.className = "segment_description"
+                            seg_desc.style.color = seg.color
+                            seg_desc.textContent = `Segment #${idx}: from (${seg.sx}, ${seg.sy}) to (${seg.ex}, ${seg.ey}) [${seg.label}]`
+                            entry.appendChild(seg_desc)
+                            idx++
+                        }
+                    }
+
+                    container.appendChild(entry)
                 }
             }
         </script>
