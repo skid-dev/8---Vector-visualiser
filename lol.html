@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Roulette Game</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f7f7f7;
+                margin: 0;
+                padding: 20px;
+            }
+            h1,
+            h2,
+            h3 {
+                text-align: center;
+                color: #333;
+            }
+            .container {
+                max-width: 800px;
+                margin: 20px auto;
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            }
+            .section {
+                margin-bottom: 20px;
+            }
+            input[type="number"],
+            select {
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-right: 5px;
+            }
+            button {
+                padding: 8px 12px;
+                border: none;
+                background: #28a745;
+                color: #fff;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                margin: 3px;
+            }
+            button:hover {
+                background: #218838;
+            }
+            /* Enlarged balance display with animation */
+            #balance {
+                font-size: 2em;
+                display: inline-block;
+                transition: transform 0.5s ease-in-out;
+            }
+            .balance-up {
+                transform: translateY(-10px);
+            }
+            .balance-down {
+                transform: translateY(10px);
+            }
+            /* Layout for funds management (add & remove in one row) */
+            .balance-management {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            /* Bets list styling */
+            #bets_list {
+                list-style-type: none;
+                padding-left: 0;
+            }
+            #bets_list li {
+                padding: 5px 0;
+                border-bottom: 1px solid #eee;
+            }
+            /* Reveal animation for outcome */
+            #result_text {
+                font-size: 16px;
+                font-weight: bold;
+                text-align: center;
+            }
+            .final-number {
+                font-size: 2em;
+                font-weight: bold;
+                animation: fade_in 0.5s ease-in-out;
+            }
+            @keyframes fade_in {
+                from {
+                    opacity: 0;
+                    transform: scale(0.5);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            hr {
+                border: none;
+                border-top: 1px solid #eee;
+                margin: 20px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>OO Advanced Split Bet Roulette Game</h1>
+        <div class="container">
+            <!-- Virtual Currency Management -->
+            <div class="section" id="balance_section">
+                <p>Balance: <span id="balance">1000</span> virtual credits</p>
+                <div class="balance-management">
+                    <input type="number" id="amount_to_add" placeholder="Amount to add" />
+                    <button id="add_funds_btn">Add Funds</button>
+                    <input type="number" id="amount_to_remove" placeholder="Amount to remove" />
+                    <button id="remove_funds_btn">Remove Funds</button>
+                </div>
+            </div>
+            <hr />
+            <!-- Split Bets Section -->
+            <div class="section" id="bets_section">
+                <h2>Place Your Bets</h2>
+                <div>
+                    <label for="bet_type">Bet Type:</label>
+                    <select id="bet_type">
+                        <option value="color">Color</option>
+                        <option value="odd_even">Odd/Even</option>
+                        <option value="low_high">Low/High</option>
+                        <option value="dozen">Dozen</option>
+                        <option value="number">Specific Number</option>
+                    </select>
+                </div>
+                <div id="bet_option_container">
+                    <!-- Default for 'Color' bet -->
+                    <label for="bet_option">Option:</label>
+                    <select id="bet_option">
+                        <option value="red">Red</option>
+                        <option value="black">Black</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="number" id="split_bet_amount" placeholder="Bet Amount" />
+                    <button id="add_bet_btn">Add Bet</button>
+                </div>
+                <div id="bets_list_container">
+                    <h3>Current Bets:</h3>
+                    <ul id="bets_list"></ul>
+                    <button id="clear_bets_btn">Clear Bets</button>
+                </div>
+                <div style="text-align: center; margin-top: 10px">
+                    <button id="spin_bets_btn">Spin</button>
+                </div>
+            </div>
+            <hr />
+            <!-- Result Section -->
+            <div class="section" id="result_section">
+                <p id="result_text"></p>
+            </div>
+        </div>
+
+        <script>
+            class RouletteGame {
+                constructor() {
+                    this.balance = 1000
+                    this.prevBalance = 1000
+                    this.bets = []
+                    this.redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]
+                    this.blackNumbers = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35]
+                    // Bind DOM elements
+                    this.balanceEl = document.getElementById("balance")
+                    this.addFundsInput = document.getElementById("amount_to_add")
+                    this.removeFundsInput = document.getElementById("amount_to_remove")
+                    this.betTypeEl = document.getElementById("bet_type")
+                    this.betOptionContainer = document.getElementById("bet_option_container")
+                    this.splitBetAmountEl = document.getElementById("split_bet_amount")
+                    this.betsListEl = document.getElementById("bets_list")
+                    this.resultTextEl = document.getElementById("result_text")
+                }
+
+                init() {
+                    // Set up event listeners
+                    document.getElementById("add_funds_btn").addEventListener("click", () => this.addFunds())
+                    document.getElementById("remove_funds_btn").addEventListener("click", () => this.removeFunds())
+                    document.getElementById("bet_type").addEventListener("change", () => this.updateBetOptionInput())
+                    document.getElementById("add_bet_btn").addEventListener("click", () => this.addBet())
+                    document.getElementById("clear_bets_btn").addEventListener("click", () => this.clearBets())
+                    document.getElementById("spin_bets_btn").addEventListener("click", () => this.spinBets())
+                    // Initialize bet option input
+                    this.updateBetOptionInput()
+                    this.updateBalanceDisplay()
+                }
+
+                updateBalanceDisplay() {
+                    if (this.balance > this.prevBalance) {
+                        this.balanceEl.classList.add("balance-up")
+                    } else if (this.balance < this.prevBalance) {
+                        this.balanceEl.classList.add("balance-down")
+                    }
+                    this.balanceEl.textContent = this.balance
+                    setTimeout(() => {
+                        this.balanceEl.classList.remove("balance-up", "balance-down")
+                    }, 500)
+                    this.prevBalance = this.balance
+                }
+
+                addFunds() {
+                    let addAmount = parseInt(this.addFundsInput.value)
+                    if (isNaN(addAmount) || addAmount <= 0) {
+                        alert("Please enter a valid amount to add")
+                        return
+                    }
+                    this.balance += addAmount
+                    this.updateBalanceDisplay()
+                    this.addFundsInput.value = ""
+                }
+
+                removeFunds() {
+                    let removeAmount = parseInt(this.removeFundsInput.value)
+                    if (isNaN(removeAmount) || removeAmount <= 0) {
+                        alert("Please enter a valid amount to remove")
+                        return
+                    }
+                    if (removeAmount > this.balance) {
+                        alert("Cannot remove more than your current balance")
+                        return
+                    }
+                    this.balance -= removeAmount
+                    this.updateBalanceDisplay()
+                    this.removeFundsInput.value = ""
+                }
+
+                updateBetOptionInput() {
+                    const betType = this.betTypeEl.value
+                    let html = ""
+                    if (betType === "color") {
+                        html =
+                            "<label for='bet_option'>Option:</label><select id='bet_option'><option value='red'>Red</option><option value='black'>Black</option></select>"
+                    } else if (betType === "odd_even") {
+                        html =
+                            "<label for='bet_option'>Option:</label><select id='bet_option'><option value='odd'>Odd</option><option value='even'>Even</option></select>"
+                    } else if (betType === "low_high") {
+                        html =
+                            "<label for='bet_option'>Option:</label><select id='bet_option'><option value='low'>1–18</option><option value='high'>19–36</option></select>"
+                    } else if (betType === "dozen") {
+                        html =
+                            "<label for='bet_option'>Option:</label><select id='bet_option'><option value='first'>1st 12</option><option value='second'>2nd 12</option><option value='third'>3rd 12</option></select>"
+                    } else if (betType === "number") {
+                        html =
+                            "<label for='bet_option'>Number (0-36):</label><input type='number' id='bet_option' min='0' max='36'>"
+                    }
+                    this.betOptionContainer.innerHTML = html
+                }
+
+                updateBetsListDisplay() {
+                    this.betsListEl.innerHTML = ""
+                    this.bets.forEach((bet, index) => {
+                        let betText = ""
+                        if (bet.type === "color") {
+                            betText = `Color: ${bet.option} - ${bet.amount} credits`
+                        } else if (bet.type === "odd_even") {
+                            betText = `Odd/Even: ${bet.option} - ${bet.amount} credits`
+                        } else if (bet.type === "low_high") {
+                            betText = `Low/High: ${bet.option === "low" ? "1–18" : "19–36"} - ${bet.amount} credits`
+                        } else if (bet.type === "dozen") {
+                            let dozenText =
+                                bet.option === "first" ? "1st 12" : bet.option === "second" ? "2nd 12" : "3rd 12"
+                            betText = `Dozen: ${dozenText} - ${bet.amount} credits`
+                        } else if (bet.type === "number") {
+                            betText = `Specific Number: ${bet.option} - ${bet.amount} credits`
+                        }
+                        const li = document.createElement("li")
+                        li.textContent = betText
+                        // Remove button for each bet
+                        const removeBtn = document.createElement("button")
+                        removeBtn.textContent = "Remove"
+                        removeBtn.style.marginLeft = "10px"
+                        removeBtn.addEventListener("click", () => {
+                            this.bets.splice(index, 1)
+                            this.updateBetsListDisplay()
+                        })
+                        li.appendChild(removeBtn)
+                        this.betsListEl.appendChild(li)
+                    })
+                }
+
+                addBet() {
+                    const betType = this.betTypeEl.value
+                    let betOption
+                    const betOptionEl = document.getElementById("bet_option")
+                    if (betType === "number") {
+                        betOption = parseInt(betOptionEl.value)
+                        if (isNaN(betOption) || betOption < 0 || betOption > 36) {
+                            alert("Please enter a valid number between 0 and 36")
+                            return
+                        }
+                    } else {
+                        betOption = betOptionEl.value
+                    }
+                    let betAmount = parseInt(this.splitBetAmountEl.value)
+                    if (isNaN(betAmount) || betAmount <= 0) {
+                        alert("Please enter a valid bet amount")
+                        return
+                    }
+                    this.bets.push({
+                        type: betType,
+                        option: betOption,
+                        amount: betAmount,
+                    })
+                    this.updateBetsListDisplay()
+                    this.splitBetAmountEl.value = ""
+                    if (betType === "number") {
+                        betOptionEl.value = ""
+                    }
+                }
+
+                clearBets() {
+                    this.bets = []
+                    this.updateBetsListDisplay()
+                }
+
+                revealOutcome(finalNum, finalColor, message, callback) {
+                    let animationInterval = setInterval(() => {
+                        let randNum = Math.floor(Math.random() * 37)
+                        this.resultTextEl.innerHTML = "Spinning... " + randNum
+                    }, 100)
+                    setTimeout(() => {
+                        clearInterval(animationInterval)
+                        this.resultTextEl.innerHTML = `The ball landed on <span class='final-number' style='color:${finalColor}'>${finalNum}</span> (${finalColor}).<br>${message}`
+                        if (callback) callback()
+                    }, 2000)
+                }
+
+                spinBets() {
+                    if (this.bets.length === 0) {
+                        alert("Please place at least one bet before spinning")
+                        return
+                    }
+                    let totalBet = this.bets.reduce((sum, bet) => sum + bet.amount, 0)
+                    if (totalBet > this.balance) {
+                        alert("Total bet amount exceeds your balance")
+                        return
+                    }
+                    let outcome = Math.floor(Math.random() * 37)
+                    let outcomeColor = ""
+                    if (outcome === 0) {
+                        outcomeColor = "green"
+                    } else if (this.redNumbers.includes(outcome)) {
+                        outcomeColor = "red"
+                    } else if (this.blackNumbers.includes(outcome)) {
+                        outcomeColor = "black"
+                    }
+                    let message = "<strong>Bet Results:</strong><br>"
+                    let netResult = 0
+                    this.bets.forEach((bet) => {
+                        let win = false
+                        let multiplier = 1
+                        if (bet.type === "color") {
+                            if (outcome !== 0 && outcomeColor === bet.option) win = true
+                        } else if (bet.type === "odd_even") {
+                            if (outcome !== 0) {
+                                if (bet.option === "odd" && outcome % 2 === 1) win = true
+                                else if (bet.option === "even" && outcome % 2 === 0) win = true
+                            }
+                        } else if (bet.type === "low_high") {
+                            if (outcome !== 0) {
+                                if (bet.option === "low" && outcome >= 1 && outcome <= 18) win = true
+                                else if (bet.option === "high" && outcome >= 19 && outcome <= 36) win = true
+                            }
+                        } else if (bet.type === "dozen") {
+                            multiplier = 2
+                            if (outcome !== 0) {
+                                if (bet.option === "first" && outcome >= 1 && outcome <= 12) win = true
+                                else if (bet.option === "second" && outcome >= 13 && outcome <= 24) win = true
+                                else if (bet.option === "third" && outcome >= 25 && outcome <= 36) win = true
+                            }
+                        } else if (bet.type === "number") {
+                            multiplier = 35
+                            if (outcome === bet.option) win = true
+                        }
+                        if (win) {
+                            let winAmount = bet.amount * multiplier
+                            netResult += winAmount
+                            message += `Bet on ${bet.type} (${bet.option}) with ${bet.amount} credits: <span style='color:green'>Win ${winAmount}</span><br>`
+                        } else {
+                            netResult -= bet.amount
+                            message += `Bet on ${bet.type} (${bet.option}) with ${bet.amount} credits: <span style='color:red'>Lose ${bet.amount}</span><br>`
+                        }
+                    })
+                    // Update balance after spin (delayed display update)
+                    this.balance += netResult
+                    this.clearBets()
+                    let netMessage = `<br><strong>Net Result:</strong> ${
+                        netResult >= 0
+                            ? "<span style='color:green'>+" + netResult + "</span>"
+                            : "<span style='color:red'>" + netResult + "</span>"
+                    }`
+                    this.revealOutcome(outcome, outcomeColor, message + netMessage, () => {
+                        this.updateBalanceDisplay()
+                    })
+                }
+            }
+
+            // Initialize the game on page load
+            const game = new RouletteGame()
+            game.init()
+        </script>
+    </body>
+</html>
