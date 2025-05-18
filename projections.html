@@ -70,6 +70,7 @@
             <div id="plot-wrapper">
                 <div class="plot-controls" style="margin-bottom: 0.5rem">
                     <button onclick="reset_plot_view()">Reset View</button>
+                    <button onclick="download_plot_image()">Download Image</button>
                 </div>
                 <div id="plot"></div>
             </div>
@@ -285,6 +286,65 @@ $end:math:text$
                     x_range: [cx - d / 2, cx + d / 2],
                     y_range: [cy - d / 2, cy + d / 2],
                 }
+            }
+
+            // Download the current plot with vector values as an image
+            function download_plot_image() {
+                // Recalculate vector components from inputs
+                let a_x = parseFloat(document.getElementById("a_x").value)
+                let a_y = parseFloat(document.getElementById("a_y").value)
+                let b_x = parseFloat(document.getElementById("b_x").value)
+                let b_y = parseFloat(document.getElementById("b_y").value)
+
+                let dot_product = a_x * b_x + a_y * b_y
+                let b_magnitude_sq = b_x ** 2 + b_y ** 2
+                let proj_x = 0,
+                    proj_y = 0,
+                    perp_x = 0,
+                    perp_y = 0
+
+                if (b_magnitude_sq !== 0) {
+                    let projection_scalar = dot_product / b_magnitude_sq
+                    proj_x = projection_scalar * b_x
+                    proj_y = projection_scalar * b_y
+                    perp_x = a_x - proj_x
+                    perp_y = a_y - proj_y
+                }
+
+                let plot = document.getElementById("plot")
+                Plotly.toImage(plot, { format: "png" }).then((dataUrl) => {
+                    let img = new Image()
+                    img.src = dataUrl
+                    img.onload = () => {
+                        let canvas = document.createElement("canvas")
+                        canvas.width = img.width
+                        canvas.height = img.height
+                        let ctx = canvas.getContext("2d")
+
+                        // White background then draw plot
+                        ctx.fillStyle = "white"
+                        ctx.fillRect(0, 0, canvas.width, canvas.height)
+                        ctx.drawImage(img, 0, 0)
+
+                        // Render vector properties in the top-left corner
+                        ctx.fillStyle = "black"
+                        ctx.font = "16px Arial"
+                        let lines = [
+                            `a = <${a_x}, ${a_y}>`,
+                            `b = <${b_x}, ${b_y}>`,
+                            `proj_b(a) = <${proj_x.toFixed(2)}, ${proj_y.toFixed(2)}>`,
+                            `a_perp = <${perp_x.toFixed(2)}, ${perp_y.toFixed(2)}>`,
+                        ]
+                        lines.forEach((line, i) => {
+                            ctx.fillText(line, 10, 20 + i * 20)
+                        })
+
+                        let link = document.createElement("a")
+                        link.href = canvas.toDataURL("image/png")
+                        link.download = "vector_projection.png"
+                        link.click()
+                    }
+                })
             }
 
             // Reset the plot view to the initial state
