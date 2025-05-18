@@ -27,6 +27,8 @@ const nav_html = `
 
 const footer_html = `
 <footer>
+  <p>Proper home page coming soon!</p>
+  <hr />
   <p>Made with ❤️ by Otto Yang</p>
   <p>Honourable mention to my three <s>slaves</s> helpful assistants: ChatGPT, Claude 3.7 Sonnet and Github Copilot.</p>
   <p>Source code available <a target="_blank" href="https://github.com/skid-dev/8---Vector-visualiser">on Github</a></p>
