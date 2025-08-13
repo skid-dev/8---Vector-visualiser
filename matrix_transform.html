@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Matrix Transformations Grapher</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --panel: #f4f6f8;
+  --panel-border: #e3e7ee;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --grid: #e5e7eb;
+  --axis: #111827;
+  --accent: #2563eb;
+  --chip: #e8eefc;
+  --chip-text: #1f3a8a;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1
+}
+
+[data-theme="dark"] {
+  --bg: #0b0f14;
+  --panel: #0f151c;
+  --panel-border: #16202b;
+  --text: #e5edf6;
+  --muted: #9aa9bb;
+  --grid: #1b2734;
+  --axis: #cde3ff;
+  --accent: #60a5fa;
+  --chip: #122235;
+  --chip-text: #cde3ff;
+  --input-bg: #0b0f14;
+  --input-border: #314155
+}
+
+* { box-sizing: border-box }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  gap: 0
+}
+
+.sidebar {
+  border-right: 1px solid var(--panel-border);
+  background: var(--panel);
+  overflow: auto;
+  padding: 14px
+}
+
+.h1 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  margin: 0 0 10px 0
+}
+
+.small {
+  font-size: 12px;
+  color: var(--muted)
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+button, select, input, textarea {
+  font: inherit
+}
+
+button {
+  background: var(--accent);
+  border: 1px solid transparent;
+  color: white;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--input-border);
+  color: var(--text)
+}
+
+button.icon {
+  padding: 6px 8px;
+  line-height: 1
+}
+
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed
+}
+
+select, input[type="text"], input[type="number"], textarea {
+  width: 100%;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--input-border);
+  padding: 8px 10px;
+  border-radius: 8px
+}
+
+textarea {
+  min-height: 64px;
+  resize: vertical
+}
+
+.section {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px
+}
+
+.section h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px
+}
+
+.badge {
+  background: var(--chip);
+  color: var(--chip-text);
+  border: 1px solid var(--panel-border);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px
+}
+
+.object_card {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--bg)
+}
+
+.object_card header {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px
+}
+
+.object_card h4 {
+  margin: 0;
+  font-size: 14px
+}
+
+.flexcol { display: flex; flex-direction: column; gap: 6px }
+
+.pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px
+}
+
+.transform_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--chip);
+  color: var(--chip-text);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px
+}
+
+.transform_chip input[type="number"] {
+  width: 72px;
+  padding: 4px 6px;
+  font-size: 12px
+}
+
+.matrix_grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(36px,1fr));
+  gap: 4px
+}
+
+.matrix_grid div {
+  padding: 6px 8px;
+  border: 1px dashed var(--panel-border);
+  border-radius: 6px;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px
+}
+
+.canvas_wrap {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg)
+}
+
+.toolbar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 5
+}
+
+.legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 5;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block
+}
+
+kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  border: 1px solid var(--panel-border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 1px 5px;
+  background: var(--bg);
+  font-size: 11px
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px
+}
+
+.table th, .table td {
+  border: 1px solid var(--panel-border);
+  padding: 6px 8px;
+  text-align: left
+}
+
+.table th {
+  background: var(--panel)
+}
+</style>
+</head>
+<body data-theme="light">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div class="h1">Matrix Transformations Grapher</div>
+          <div class="small">Zoom with mouse wheel • Drag to pan • Click shapes to select</div>
+        </div>
+        <button id="theme_toggle" class="ghost" title="Toggle theme">🌙</button>
+      </div>
+
+      <div class="section">
+        <h3>Add object</h3>
+        <div class="row">
+          <select id="input_type">
+            <option value="point">Point</option>
+            <option value="polyline">Polyline</option>
+            <option value="polygon">Polygon</option>
+          </select>
+          <input id="input_name" type="text" placeholder="Name (optional)">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="color_input" type="color" value="#2563eb" title="Stroke color">
+          <label class="row small" style="gap:6px">
+            <input id="close_polygon" type="checkbox">
+            Close polygon
+          </label>
+        </div>
+        <div style="margin-top:8px">
+          <textarea id="coords_text" placeholder="Enter coordinates e.g. 0,0  2,0  2,1  0,1"></textarea>
+          <div class="small" style="margin-top:6px">
+            Enter pairs as <b>x,y</b>. Separate with spaces or new lines. For a point, provide one pair.
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px;justify-content:space-between">
+          <div class="row" style="gap:6px">
+            <button id="add_object_btn">Add</button>
+            <button id="clear_form_btn" class="ghost">Clear</button>
+          </div>
+          <div class="row" style="gap:6px">
+            <button id="preset_square_btn" class="ghost" title="Unit square">Unit □</button>
+            <button id="preset_tri_btn" class="ghost" title="Triangle">△</button>
+            <button id="preset_axes_btn" class="ghost" title="Basis vectors">Basis</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Objects</h3>
+        <div id="objects_list"></div>
+      </div>
+
+      <div class="section">
+        <h3>Available transformations</h3>
+        <div class="small">These match the matrices in your table</div>
+        <table class="table">
+          <thead>
+            <tr><th>Transformation</th><th>Matrix [a b; c d]</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Reflection in the x‑axis</td><td>[1 0; 0 −1]</td></tr>
+            <tr><td>Reflection in the y‑axis</td><td>[−1 0; 0 1]</td></tr>
+            <tr><td>Reflection in y = x</td><td>[0 1; 1 0]</td></tr>
+            <tr><td>Reflection in y = −x</td><td>[0 −1; −1 0]</td></tr>
+            <tr><td>Dilation from the y‑axis (scale x by c)</td><td>[c 0; 0 1]</td></tr>
+            <tr><td>Dilation from the x‑axis (scale y by c)</td><td>[1 0; 0 c]</td></tr>
+            <tr><td>Shear parallel to the x‑axis (by c)</td><td>[1 c; 0 1]</td></tr>
+            <tr><td>Shear parallel to the y‑axis (by c)</td><td>[1 0; c 1]</td></tr>
+            <tr><td>Projection onto the x‑axis</td><td>[1 0; 0 0]</td></tr>
+            <tr><td>Projection onto the y‑axis</td><td>[0 0; 0 1]</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="small">
+        Shortcuts: <kbd>R</kbd> reset view • <kbd>0</kbd> fit to objects • <kbd>D</kbd> duplicate selected • <kbd>Backspace</kbd> delete selected
+      </div>
+    </aside>
+
+    <main class="canvas_wrap">
+      <div class="toolbar">
+        <button id="reset_view_btn" class="ghost">Reset view</button>
+        <button id="fit_view_btn" class="ghost">Fit to objects</button>
+        <span class="badge" id="info_zoom">100%</span>
+      </div>
+      <div class="legend">Original = dashed • Transformed = solid • Area labels near centroids</div>
+      <canvas id="graph"></canvas>
+    </main>
+  </div>
+
+<script>
+/* ============================
+   Utilities and data models
+============================ */
+
+const transform_catalog = {
+  reflection_x: {
+    key: "reflection_x",
+    name: "Reflection in x-axis",
+    params: [],
+    matrix: () => [[1,0],[0,-1]]
+  },
+  reflection_y: {
+    key: "reflection_y",
+    name: "Reflection in y-axis",
+    params: [],
+    matrix: () => [[-1,0],[0,1]]
+  },
+  reflection_y_eq_x: {
+    key: "reflection_y_eq_x",
+    name: "Reflection in y = x",
+    params: [],
+    matrix: () => [[0,1],[1,0]]
+  },
+  reflection_y_eq_neg_x: {
+    key: "reflection_y_eq_neg_x",
+    name: "Reflection in y = -x",
+    params: [],
+    matrix: () => [[0,-1],[-1,0]]
+  },
+  dilation_from_y: {
+    key: "dilation_from_y",
+    name: "Dilation from y-axis (scale x by c)",
+    params: [{key:"c", label:"c", default:2, step:"any"}],
+    matrix: p => [[Number(p.c),0],[0,1]]
+  },
+  dilation_from_x: {
+    key: "dilation_from_x",
+    name: "Dilation from x-axis (scale y by c)",
+    params: [{key:"c", label:"c", default:2, step:"any"}],
+    matrix: p => [[1,0],[0,Number(p.c)]]
+  },
+  shear_x: {
+    key: "shear_x",
+    name: "Shear parallel to x-axis (by c)",
+    params: [{key:"c", label:"c", default:1, step:"any"}],
+    matrix: p => [[1,Number(p.c)],[0,1]]
+  },
+  shear_y: {
+    key: "shear_y",
+    name: "Shear parallel to y-axis (by c)",
+    params: [{key:"c", label:"c", default:1, step:"any"}],
+    matrix: p => [[1,0],[Number(p.c),1]]
+  },
+  projection_x: {
+    key: "projection_x",
+    name: "Projection onto x-axis",
+    params: [],
+    matrix: () => [[1,0],[0,0]]
+  },
+  projection_y: {
+    key: "projection_y",
+    name: "Projection onto y-axis",
+    params: [],
+    matrix: () => [[0,0],[0,1]]
+  },
+  custom_matrix: {
+    key: "custom_matrix",
+    name: "Custom matrix",
+    params: [
+      {key:"a", label:"a", default:1, step:"any"},
+      {key:"b", label:"b", default:0, step:"any"},
+      {key:"c", label:"c", default:0, step:"any"},
+      {key:"d", label:"d", default:1, step:"any"}
+    ],
+    matrix: p => [[Number(p.a),Number(p.b)],[Number(p.c),Number(p.d)]]
+  }
+}
+
+function identity_matrix() {
+  return [[1,0],[0,1]]
+}
+
+function matrix_multiply(a, b) {
+  const r00 = a[0][0]*b[0][0] + a[0][1]*b[1][0]
+  const r01 = a[0][0]*b[0][1] + a[0][1]*b[1][1]
+  const r10 = a[1][0]*b[0][0] + a[1][1]*b[1][0]
+  const r11 = a[1][0]*b[0][1] + a[1][1]*b[1][1]
+  return [[r00,r01],[r10,r11]]
+}
+
+function apply_matrix_point(m, p) {
+  return {
+    x: m[0][0]*p.x + m[0][1]*p.y,
+    y: m[1][0]*p.x + m[1][1]*p.y
+  }
+}
+
+function parse_coords_text(text) {
+  const tokens = text.replaceAll("("," ").replaceAll(")"," ").split(/[\s]+/).filter(t => t.length)
+  const points = []
+  for (const tok of tokens) {
+    const parts = tok.split(",")
+    if (parts.length !== 2) continue
+    const x = Number(parts[0])
+    const y = Number(parts[1])
+    if (Number.isFinite(x) && Number.isFinite(y)) points.push({x, y})
+  }
+  return points
+}
+
+function format_number(n) {
+  if (!Number.isFinite(n)) return "—"
+  const rounded = Math.round(n*1000)/1000
+  return String(rounded)
+}
+
+/* ===== New: polygon area + centroid helpers ===== */
+
+function polygon_signed_area(pts) {
+  if (!pts || pts.length < 3) return 0
+  let sum = 0
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length
+    sum += pts[i].x * pts[j].y - pts[j].x * pts[i].y
+  }
+  return 0.5 * sum
+}
+
+function polygon_centroid(pts) {
+  if (!pts || pts.length < 3) {
+    if (pts && pts.length) {
+      const avgx = pts.reduce((a,p)=>a+p.x,0) / pts.length
+      const avgy = pts.reduce((a,p)=>a+p.y,0) / pts.length
+      return {x:avgx,y:avgy}
+    }
+    return {x:0,y:0}
+  }
+  const a = polygon_signed_area(pts)
+  if (Math.abs(a) < 1e-9) {
+    const avgx = pts.reduce((acc,p)=>acc+p.x,0) / pts.length
+    const avgy = pts.reduce((acc,p)=>acc+p.y,0) / pts.length
+    return {x:avgx,y:avgy}
+  }
+  let cx = 0
+  let cy = 0
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length
+    const cross = pts[i].x * pts[j].y - pts[j].x * pts[i].y
+    cx += (pts[i].x + pts[j].x) * cross
+    cy += (pts[i].y + pts[j].y) * cross
+  }
+  cx /= (6 * a)
+  cy /= (6 * a)
+  return {x:cx, y:cy}
+}
+
+/* ============================
+   State
+============================ */
+
+const state = {
+  objects: [],
+  selected_object_id: null,
+  next_id: 1,
+  view: {
+    scale: 70,
+    pan_x: 0,
+    pan_y: 0
+  },
+  grid: {
+    show: true
+  }
+}
+
+function create_object(config) {
+  const id = state.next_id++
+  return {
+    id,
+    name: config.name || "Object " + id,
+    type: config.type || "polygon",
+    color: config.color || "#2563eb",
+    show_original: true,
+    show_transformed: true,
+    closed: Boolean(config.closed),
+    coords: config.coords || [],
+    transforms: []
+  }
+}
+
+/* ============================
+   Canvas + view helpers
+============================ */
+
+const canvas = document.getElementById("graph")
+const ctx = canvas.getContext("2d")
+
+function resize_canvas() {
+  const ratio = window.devicePixelRatio || 1
+  const {clientWidth, clientHeight} = canvas
+  canvas.width = clientWidth * ratio
+  canvas.height = clientHeight * ratio
+  ctx.setTransform(1,0,0,1,0,0)
+  ctx.scale(ratio, ratio)
+  draw()
+}
+
+function world_to_screen(p) {
+  const cx = canvas.clientWidth / 2
+  const cy = canvas.clientHeight / 2
+  const x = cx + p.x * state.view.scale + state.view.pan_x
+  const y = cy - p.y * state.view.scale + state.view.pan_y
+  return {x, y}
+}
+
+function screen_to_world(p) {
+  const cx = canvas.clientWidth / 2
+  const cy = canvas.clientHeight / 2
+  const x = (p.x - cx - state.view.pan_x) / state.view.scale
+  const y = -(p.y - cy - state.view.pan_y) / state.view.scale
+  return {x, y}
+}
+
+function zoom_at(client_x, client_y, factor) {
+  const before = screen_to_world({x: client_x, y: client_y})
+  state.view.scale *= factor
+  const cx = canvas.clientWidth / 2
+  const cy = canvas.clientHeight / 2
+  state.view.pan_x = client_x - cx - before.x * state.view.scale
+  state.view.pan_y = client_y - cy + before.y * state.view.scale
+  update_zoom_badge()
+  draw()
+}
+
+function update_zoom_badge() {
+  const pct = Math.round(state.view.scale / 70 * 100)
+  document.getElementById("info_zoom").textContent = pct + "%"
+}
+
+/* ============================
+   Drawing
+============================ */
+
+function draw_axes_and_grid() {
+  const w = canvas.clientWidth
+  const h = canvas.clientHeight
+  ctx.clearRect(0,0,w,h)
+
+  if (state.grid.show) {
+    const cx = w/2 + state.view.pan_x
+    const cy = h/2 + state.view.pan_y
+    const step_px = state.view.scale
+
+    ctx.lineWidth = 1
+    ctx.strokeStyle = get_css_var("--grid")
+
+    for (let x = cx % step_px; x < w; x += step_px) {
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, h)
+      ctx.stroke()
+    }
+    for (let x = cx - step_px; x > 0; x -= step_px) {
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, h)
+      ctx.stroke()
+    }
+
+    for (let y = cy % step_px; y < h; y += step_px) {
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(w, y)
+      ctx.stroke()
+    }
+    for (let y = cy - step_px; y > 0; y -= step_px) {
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(w, y)
+      ctx.stroke()
+}
+  }
+
+  ctx.strokeStyle = get_css_var("--axis")
+  ctx.lineWidth = 1.6
+  draw_axis_line({x:-1e6,y:0},{x:1e6,y:0})
+  draw_axis_line({x:0,y:-1e6},{x:0,y:1e6})
+
+  const tick_len = 6
+  const min = screen_to_world({x:0,y:h})
+  const max = screen_to_world({x:w,y:0})
+  const start_x = Math.ceil(min.x)
+  const end_x = Math.floor(max.x)
+  const start_y = Math.ceil(min.y)
+  const end_y = Math.floor(max.y)
+
+  ctx.fillStyle = get_css_var("--axis")
+  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+
+  for (let x = start_x; x <= end_x; x++) {
+    const p = world_to_screen({x, y:0})
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y - tick_len)
+    ctx.lineTo(p.x, p.y + tick_len)
+    ctx.stroke()
+    if (x !== 0) ctx.fillText(String(x), p.x + 3, p.y - 4)
+  }
+
+  for (let y = start_y; y <= end_y; y++) {
+    const p = world_to_screen({x:0, y})
+    ctx.beginPath()
+    ctx.moveTo(p.x - tick_len, p.y)
+    ctx.lineTo(p.x + tick_len, p.y)
+    ctx.stroke()
+    if (y !== 0) ctx.fillText(String(y), p.x + 6, p.y - 2)
+  }
+}
+
+function draw_axis_line(p1, p2) {
+  const a = world_to_screen(p1)
+  const b = world_to_screen(p2)
+  ctx.beginPath()
+  ctx.moveTo(a.x, a.y)
+  ctx.lineTo(b.x, b.y)
+  ctx.stroke()
+}
+
+function draw_objects() {
+  for (const obj of state.objects) draw_object(obj)
+}
+
+function draw_object(obj) {
+  if (!obj.coords.length) return
+
+  const selected = state.selected_object_id === obj.id
+  const stroke_w = selected ? 3 : 2
+
+  const m = combined_matrix_for_object(obj)
+  const transformed = obj.coords.map(p => apply_matrix_point(m, p))
+
+  if (obj.show_original) {
+    ctx.setLineDash([6,6])
+    draw_shape(obj.coords, obj, stroke_w, true)
+    if (obj.type === "polygon" && obj.coords.length >= 3) draw_area_label(obj.coords, obj, true)
+  }
+
+  if (obj.show_transformed) {
+    ctx.setLineDash([])
+    draw_shape(transformed, obj, stroke_w, false)
+    if (obj.type === "polygon" && transformed.length >= 3) draw_area_label(transformed, obj, false)
+  }
+}
+
+function draw_shape(points, obj, stroke_w, is_original) {
+  if (points.length === 1 && obj.type === "point") {
+    const s = world_to_screen(points[0])
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, 4, 0, Math.PI*2)
+    ctx.fillStyle = obj.color
+    ctx.globalAlpha = is_original ? 0.55 : 0.95
+    ctx.fill()
+    ctx.globalAlpha = 1
+    return
+  }
+
+  const screen_pts = points.map(world_to_screen)
+  ctx.beginPath()
+  ctx.moveTo(screen_pts[0].x, screen_pts[0].y)
+  for (let i = 1; i < screen_pts.length; i++) ctx.lineTo(screen_pts[i].x, screen_pts[i].y)
+  if (obj.type === "polygon" && (obj.closed || is_original === false)) {
+    ctx.closePath()
+    ctx.globalAlpha = is_original ? 0.08 : 0.18
+    ctx.fillStyle = obj.color
+    ctx.fill()
+    ctx.globalAlpha = 1
+  }
+  ctx.lineWidth = stroke_w
+  ctx.strokeStyle = obj.color
+  ctx.stroke()
+}
+
+/* ===== New: draw area labels on canvas ===== */
+
+function draw_area_label(points, obj, is_original) {
+  const area = Math.abs(polygon_signed_area(points))
+  const c = polygon_centroid(points)
+  const s = world_to_screen(c)
+  const label = (is_original ? "A = " : "A′ = ") + format_number(area)
+
+  ctx.save()
+  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+  ctx.textBaseline = "top"
+  const m = ctx.measureText(label)
+  const pad = 4
+  const y_offset = is_original ? 26 : 10
+  const x = s.x - m.width/2
+  const y = s.y - y_offset
+
+  ctx.globalAlpha = 0.85
+  ctx.fillStyle = get_css_var("--panel")
+  ctx.fillRect(x - pad, y - pad, m.width + 2*pad, 16 + 2*pad)
+  ctx.globalAlpha = 1
+  ctx.strokeStyle = get_css_var("--panel-border")
+  ctx.strokeRect(x - pad, y - pad, m.width + 2*pad, 16 + 2*pad)
+
+  ctx.fillStyle = obj.color
+  ctx.fillText(label, x, y)
+  ctx.restore()
+}
+
+/* ============================
+   Composition + matrices UI
+============================ */
+
+function combined_matrix_for_object(obj) {
+  let m = identity_matrix()
+  for (const t of obj.transforms) {
+    const def = transform_catalog[t.key]
+    const tm = def.matrix(t.params || {})
+    m = matrix_multiply(tm, m)
+  }
+  return m
+}
+
+function update_matrix_preview(container, obj) {
+  const m = combined_matrix_for_object(obj)
+  const cells = container.querySelectorAll("[data-mat]")
+  cells[0].textContent = format_number(m[0][0])
+  cells[1].textContent = format_number(m[0][1])
+  cells[2].textContent = format_number(m[1][0])
+  cells[3].textContent = format_number(m[1][1])
+}
+
+/* ===== New: area panel updater ===== */
+
+function update_area_block(container, obj) {
+  const abs_span = container.querySelector(".area_abs")
+  const signed_span = container.querySelector(".area_signed")
+  const note = container.querySelector(".orientation_note")
+  if (obj.type !== "polygon" || obj.coords.length < 3) {
+    abs_span.textContent = "n/a"
+    signed_span.textContent = "n/a"
+    note.textContent = ""
+    return
+  }
+  const m = combined_matrix_for_object(obj)
+  const trans = obj.coords.map(p => apply_matrix_point(m,p))
+  const a0s = polygon_signed_area(obj.coords)
+  const a1s = polygon_signed_area(trans)
+  const a0 = Math.abs(a0s)
+  const a1 = Math.abs(a1s)
+  abs_span.textContent = `${format_number(a0)} → ${format_number(a1)}`
+  signed_span.textContent = `${format_number(a0s)} → ${format_number(a1s)}`
+  const flipped = a0s * a1s < 0
+  note.textContent = flipped ? " (orientation flipped)" : ""
+}
+
+/* ============================
+   Sidebar: objects list
+============================ */
+
+const objects_list_el = document.getElementById("objects_list")
+
+function render_objects_list() {
+  objects_list_el.innerHTML = ""
+  if (!state.objects.length) {
+    const empty = document.createElement("div")
+    empty.className = "small"
+    empty.textContent = "No objects yet. Add one above or use presets."
+    objects_list_el.appendChild(empty)
+    draw()
+    return
+  }
+
+  for (const obj of state.objects) {
+    const card = document.createElement("div")
+    card.className = "object_card"
+    card.dataset.id = String(obj.id)
+
+    const header = document.createElement("header")
+    const name_input = document.createElement("input")
+    name_input.type = "text"
+    name_input.value = obj.name
+    name_input.addEventListener("input", () => {
+      obj.name = name_input.value
+      title.textContent = obj.name
+    })
+
+    const color_input = document.createElement("input")
+    color_input.type = "color"
+    color_input.value = obj.color
+    color_input.addEventListener("input", () => {
+      obj.color = color_input.value
+      draw()
+    })
+
+    const toggle_original = document.createElement("input")
+    toggle_original.type = "checkbox"
+    toggle_original.checked = obj.show_original
+    toggle_original.title = "Show original"
+    toggle_original.addEventListener("change", () => {
+      obj.show_original = toggle_original.checked
+      draw()
+    })
+
+    const toggle_transformed = document.createElement("input")
+    toggle_transformed.type = "checkbox"
+    toggle_transformed.checked = obj.show_transformed
+    toggle_transformed.title = "Show transformed"
+    toggle_transformed.addEventListener("change", () => {
+      obj.show_transformed = toggle_transformed.checked
+      draw()
+    })
+
+    const title = document.createElement("h4")
+    title.textContent = obj.name
+
+    header.appendChild(title)
+    header.appendChild(color_input)
+    header.appendChild(toggle_original)
+    header.appendChild(toggle_transformed)
+
+    const controls_row = document.createElement("div")
+    controls_row.className = "row"
+    const type_badge = document.createElement("span")
+    type_badge.className = "badge"
+    type_badge.textContent = obj.type
+    const select_btn = document.createElement("button")
+    select_btn.className = "ghost icon"
+    select_btn.textContent = "Select"
+    select_btn.addEventListener("click", () => {
+      state.selected_object_id = obj.id
+      render_objects_list()
+      draw()
+    })
+    const dup_btn = document.createElement("button")
+    dup_btn.className = "ghost icon"
+    dup_btn.textContent = "Duplicate"
+    dup_btn.addEventListener("click", () => {
+      const copy = JSON.parse(JSON.stringify(obj))
+      copy.id = state.next_id++
+      copy.name = obj.name + " copy"
+      state.objects.push(copy)
+      render_objects_list()
+      draw()
+    })
+    const del_btn = document.createElement("button")
+    del_btn.className = "ghost icon"
+    del_btn.textContent = "Delete"
+    del_btn.addEventListener("click", () => {
+      state.objects = state.objects.filter(o => o.id !== obj.id)
+      if (state.selected_object_id === obj.id) state.selected_object_id = null
+      render_objects_list()
+      draw()
+    })
+    controls_row.appendChild(type_badge)
+    controls_row.appendChild(select_btn)
+    controls_row.appendChild(dup_btn)
+    controls_row.appendChild(del_btn)
+
+    const coords_block = document.createElement("div")
+    coords_block.className = "flexcol"
+    const coord_label = document.createElement("div")
+    coord_label.className = "small"
+    coord_label.textContent = "Coordinates (world units)"
+    const coords_textarea = document.createElement("textarea")
+    coords_textarea.value = obj.coords.map(p => `${p.x},${p.y}`).join("  ")
+    coords_textarea.addEventListener("change", () => {
+      const pts = parse_coords_text(coords_textarea.value)
+      if (pts.length) obj.coords = pts
+      update_area_block(area_panel, obj)
+      draw()
+    })
+    const toggles_row = document.createElement("div")
+    toggles_row.className = "row"
+    const closed_label = document.createElement("label")
+    closed_label.className = "row small"
+    closed_label.style.gap = "6px"
+    const closed_cb = document.createElement("input")
+    closed_cb.type = "checkbox"
+    closed_cb.checked = obj.closed
+    closed_cb.addEventListener("change", () => {
+      obj.closed = closed_cb.checked
+      draw()
+    })
+    closed_label.appendChild(closed_cb)
+    closed_label.appendChild(document.createTextNode("Close polygon when drawing"))
+
+    coords_block.appendChild(coord_label)
+    coords_block.appendChild(coords_textarea)
+    coords_block.appendChild(toggles_row)
+    toggles_row.appendChild(closed_label)
+
+    const pipeline_block = document.createElement("div")
+    pipeline_block.className = "flexcol"
+    const pipeline_label = document.createElement("div")
+    pipeline_label.className = "small"
+    pipeline_label.textContent = "Transformation pipeline (applied in order, top → bottom)"
+    const pipeline = document.createElement("div")
+    pipeline.className = "pipeline"
+    pipeline_block.appendChild(pipeline_label)
+    pipeline_block.appendChild(pipeline)
+
+    function render_pipeline() {
+      pipeline.innerHTML = ""
+      obj.transforms.forEach((t, idx) => {
+        const chip = document.createElement("div")
+        chip.className = "transform_chip"
+
+        const label = document.createElement("span")
+        label.textContent = transform_catalog[t.key].name
+        chip.appendChild(label)
+
+        const def = transform_catalog[t.key]
+        for (const pdef of def.params || []) {
+          const input = document.createElement("input")
+          input.type = "number"
+          input.step = pdef.step || "any"
+          input.value = t.params[pdef.key]
+          input.title = pdef.label
+          input.addEventListener("input", () => {
+            t.params[pdef.key] = Number(input.value)
+            update_matrix_preview(matrix_preview, obj)
+            update_area_block(area_panel, obj)
+            draw()
+          })
+          chip.appendChild(input)
+        }
+
+        const up = document.createElement("button")
+        up.className = "icon ghost"
+        up.textContent = "↑"
+        up.title = "Move up"
+        up.disabled = idx === 0
+        up.addEventListener("click", () => {
+          const [item] = obj.transforms.splice(idx,1)
+          obj.transforms.splice(idx-1,0,item)
+          render_pipeline()
+          update_matrix_preview(matrix_preview, obj)
+          update_area_block(area_panel, obj)
+          draw()
+        })
+
+        const down = document.createElement("button")
+        down.className = "icon ghost"
+        down.textContent = "↓"
+        down.title = "Move down"
+        down.disabled = idx === obj.transforms.length - 1
+        down.addEventListener("click", () => {
+          const [item] = obj.transforms.splice(idx,1)
+          obj.transforms.splice(idx+1,0,item)
+          render_pipeline()
+          update_matrix_preview(matrix_preview, obj)
+          update_area_block(area_panel, obj)
+          draw()
+        })
+
+        const remove = document.createElement("button")
+        remove.className = "icon ghost"
+        remove.textContent = "✕"
+        remove.title = "Remove"
+        remove.addEventListener("click", () => {
+          obj.transforms.splice(idx,1)
+          render_pipeline()
+          update_matrix_preview(matrix_preview, obj)
+          update_area_block(area_panel, obj)
+          draw()
+        })
+
+        chip.appendChild(up)
+        chip.appendChild(down)
+        chip.appendChild(remove)
+        pipeline.appendChild(chip)
+      })
+    }
+
+    const add_row = document.createElement("div")
+    add_row.className = "row"
+    const select = document.createElement("select")
+
+    for (const key of Object.keys(transform_catalog)) {
+      const opt = document.createElement("option")
+      opt.value = key
+      opt.textContent = transform_catalog[key].name
+      select.appendChild(opt)
+    }
+
+    const param_container = document.createElement("div")
+    param_container.className = "row"
+    param_container.style.flexWrap = "wrap"
+
+    const add_btn = document.createElement("button")
+    add_btn.textContent = "Add"
+    add_btn.addEventListener("click", () => {
+      const key = select.value
+      const def = transform_catalog[key]
+      const params = {}
+      for (const pdef of def.params || []) {
+        const el = param_container.querySelector(`[data-param="${pdef.key}"]`)
+        params[pdef.key] = Number(el ? el.value : pdef.default)
+      }
+      obj.transforms.push({key, params})
+      render_pipeline()
+      update_matrix_preview(matrix_preview, obj)
+      update_area_block(area_panel, obj)
+      draw()
+    })
+
+    function render_param_inputs_for(key) {
+      param_container.innerHTML = ""
+      const def = transform_catalog[key]
+      for (const pdef of def.params || []) {
+        const wrap = document.createElement("div")
+        wrap.className = "row"
+        const lab = document.createElement("label")
+        lab.className = "small"
+        lab.textContent = pdef.label + ":"
+        const input = document.createElement("input")
+        input.type = "number"
+        input.step = pdef.step || "any"
+        input.value = pdef.default
+        input.dataset.param = pdef.key
+        wrap.appendChild(lab)
+        wrap.appendChild(input)
+        param_container.appendChild(wrap)
+      }
+    }
+    render_param_inputs_for(select.value)
+    select.addEventListener("change", () => render_param_inputs_for(select.value))
+
+    add_row.appendChild(select)
+    add_row.appendChild(param_container)
+    add_row.appendChild(add_btn)
+    pipeline_block.appendChild(add_row)
+
+    const matrix_preview = document.createElement("div")
+    matrix_preview.style.marginTop = "8px"
+    const matrix_label = document.createElement("div")
+    matrix_label.className = "small"
+    matrix_label.textContent = "Combined matrix"
+    const grid = document.createElement("div")
+    grid.className = "matrix_grid"
+    grid.innerHTML = `
+      <div data-mat="a">1</div>
+      <div data-mat="b">0</div>
+      <div data-mat="c">0</div>
+      <div data-mat="d">1</div>
+    `
+    matrix_preview.appendChild(matrix_label)
+    matrix_preview.appendChild(grid)
+    update_matrix_preview(matrix_preview, obj)
+
+    /* New: area panel */
+    const area_panel = document.createElement("div")
+    area_panel.style.marginTop = "8px"
+    area_panel.innerHTML = `
+      <div class="small"><b>Area</b> (units²): <span class="area_abs">—</span></div>
+      <div class="small">Signed: <span class="area_signed">—</span><span class="orientation_note"></span></div>
+    `
+    update_area_block(area_panel, obj)
+
+    card.appendChild(header)
+    card.appendChild(controls_row)
+    card.appendChild(coords_block)
+    card.appendChild(pipeline_block)
+    card.appendChild(matrix_preview)
+    card.appendChild(area_panel)
+
+    if (state.selected_object_id === obj.id) card.style.outline = "2px solid var(--accent)"
+
+    objects_list_el.appendChild(card)
+    render_pipeline()
+  }
+
+  draw()
+}
+
+/* ============================
+   Input form + presets
+============================ */
+
+const input_type_el = document.getElementById("input_type")
+const input_name_el = document.getElementById("input_name")
+const coords_text_el = document.getElementById("coords_text")
+const color_input_el = document.getElementById("color_input")
+const close_polygon_el = document.getElementById("close_polygon")
+
+function clear_add_form() {
+  input_type_el.value = "polygon"
+  input_name_el.value = ""
+  coords_text_el.value = ""
+  color_input_el.value = "#2563eb"
+  close_polygon_el.checked = false
+}
+
+document.getElementById("clear_form_btn").addEventListener("click", clear_add_form)
+
+document.getElementById("add_object_btn").addEventListener("click", () => {
+  const type = input_type_el.value
+  const pts = parse_coords_text(coords_text_el.value)
+  if (type === "point" && pts.length !== 1) {
+    alert("For a point, enter exactly one pair x,y")
+    return
+  }
+  if ((type === "polyline" || type === "polygon") && pts.length < 2) {
+    alert("For a polyline/polygon, enter at least two points")
+    return
+  }
+  const obj = create_object({
+    name: input_name_el.value || undefined,
+    type,
+    color: color_input_el.value,
+    coords: pts,
+    closed: close_polygon_el.checked
+  })
+  state.objects.push(obj)
+  state.selected_object_id = obj.id
+  render_objects_list()
+  draw()
+})
+
+document.getElementById("preset_square_btn").addEventListener("click", () => {
+  input_type_el.value = "polygon"
+  coords_text_el.value = "0,0  1,0  1,1  0,1"
+  close_polygon_el.checked = true
+  input_name_el.value = "Unit square"
+})
+
+document.getElementById("preset_tri_btn").addEventListener("click", () => {
+  input_type_el.value = "polygon"
+  coords_text_el.value = "0,0  2,0  0.5,1.5"
+  close_polygon_el.checked = true
+  input_name_el.value = "Triangle"
+})
+
+document.getElementById("preset_axes_btn").addEventListener("click", () => {
+  input_type_el.value = "polyline"
+  coords_text_el.value = "0,0  1,0  0,0  0,1"
+  close_polygon_el.checked = false
+  input_name_el.value = "Basis vectors"
+})
+
+/* ============================
+   Theme + toolbar
+============================ */
+
+document.getElementById("theme_toggle").addEventListener("click", () => {
+  const cur = document.body.getAttribute("data-theme")
+  document.body.setAttribute("data-theme", cur === "dark" ? "light" : "dark")
+  draw()
+})
+
+document.getElementById("reset_view_btn").addEventListener("click", () => {
+  reset_view()
+})
+
+document.getElementById("fit_view_btn").addEventListener("click", () => {
+  fit_view_to_objects()
+})
+
+function reset_view() {
+  state.view.scale = 70
+  state.view.pan_x = 0
+  state.view.pan_y = 0
+  update_zoom_badge()
+  draw()
+}
+
+function fit_view_to_objects() {
+  if (!state.objects.length) return
+  let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity
+  for (const obj of state.objects) {
+    const m = combined_matrix_for_object(obj)
+    const pts = obj.coords.map(p => apply_matrix_point(m, p)).concat(obj.coords)
+    for (const p of pts) {
+      if (p.x < minx) minx = p.x
+      if (p.x > maxx) maxx = p.x
+      if (p.y < miny) miny = p.y
+      if (p.y > maxy) maxy = p.y
+    }
+  }
+  if (!Number.isFinite(minx)) return
+  const w = canvas.clientWidth
+  const h = canvas.clientHeight
+  const margin = 40
+  const range_x = Math.max(1e-6, maxx - minx)
+  const range_y = Math.max(1e-6, maxy - miny)
+  const scale_x = (w - 2*margin) / range_x
+  const scale_y = (h - 2*margin) / range_y
+  state.view.scale = Math.max(20, Math.min(scale_x, scale_y))
+  const cx_world = (minx + maxx) / 2
+  const cy_world = (miny + maxy) / 2
+  const cx = w / 2
+  const cy = h / 2
+  state.view.pan_x = cx - cx_world * state.view.scale
+  state.view.pan_y = cy + cy_world * state.view.scale * -1
+  update_zoom_badge()
+  draw()
+}
+
+/* ============================
+   Interaction: zoom + pan + pick
+============================ */
+
+let is_panning = false
+let pan_start = {x:0, y:0}
+let pan_base = {x:0, y:0}
+
+canvas.addEventListener("wheel", e => {
+  e.preventDefault()
+  const factor = e.deltaY < 0 ? 1.1 : 1/1.1
+  zoom_at(e.clientX, e.clientY, factor)
+}, {passive:false})
+
+canvas.addEventListener("pointerdown", e => {
+  is_panning = true
+  pan_start = {x: e.clientX, y: e.clientY}
+  pan_base = {x: state.view.pan_x, y: state.view.pan_y}
+  canvas.setPointerCapture(e.pointerId)
+})
+
+canvas.addEventListener("pointermove", e => {
+  if (!is_panning) return
+  const dx = e.clientX - pan_start.x
+  const dy = e.clientY - pan_start.y
+  state.view.pan_x = pan_base.x + dx
+  state.view.pan_y = pan_base.y + dy
+  draw()
+})
+
+canvas.addEventListener("pointerup", e => {
+  is_panning = false
+  canvas.releasePointerCapture(e.pointerId)
+})
+
+canvas.addEventListener("click", e => {
+  const world = screen_to_world({x:e.clientX, y:e.clientY})
+  const hit = pick_object_at(world)
+  if (hit) {
+    state.selected_object_id = hit.id
+    render_objects_list()
+  }
+})
+
+function pick_object_at(world_pt) {
+  const tol = 8 / state.view.scale
+  for (let i = state.objects.length - 1; i >= 0; i--) {
+    const obj = state.objects[i]
+    const m = combined_matrix_for_object(obj)
+    const all = []
+    if (obj.show_transformed) all.push(obj.coords.map(p => apply_matrix_point(m,p)))
+    if (obj.show_original) all.push(obj.coords)
+    for (const pts of all) {
+      if (obj.type === "point") {
+        const p = pts[0]
+        const d = Math.hypot(world_pt.x - p.x, world_pt.y - p.y)
+        if (d <= tol) return obj
+      } else {
+        for (let j = 0; j < pts.length - 1; j++) {
+          if (point_segment_distance(world_pt, pts[j], pts[j+1]) <= tol) return obj
+        }
+        if (obj.type === "polygon" && (obj.closed || true)) {
+          if (point_segment_distance(world_pt, pts[pts.length-1], pts[0]) <= tol) return obj
+        }
+      }
+    }
+  }
+  return null
+}
+
+function point_segment_distance(p, a, b) {
+  const vx = b.x - a.x
+  const vy = b.y - a.y
+  const wx = p.x - a.x
+  const wy = p.y - a.y
+  const c1 = vx*wx + vy*wy
+  const c2 = vx*vx + vy*vy
+  let t = c2 === 0 ? 0 : Math.max(0, Math.min(1, c1 / c2))
+  const proj = {x: a.x + t*vx, y: a.y + t*vy}
+  return Math.hypot(p.x - proj.x, p.y - proj.y)
+}
+
+/* ============================
+   Drawing orchestrator
+============================ */
+
+function draw() {
+  draw_axes_and_grid()
+  draw_objects()
+}
+
+/* ============================
+   Helpers
+============================ */
+
+function get_css_var(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim()
+}
+
+/* ============================
+   Keyboard shortcuts
+============================ */
+
+window.addEventListener("keydown", e => {
+  if (e.key === "r" || e.key === "R") {
+    reset_view()
+  } else if (e.key === "0") {
+    fit_view_to_objects()
+  } else if (e.key === "Backspace") {
+    if (state.selected_object_id != null) {
+      state.objects = state.objects.filter(o => o.id !== state.selected_object_id)
+      state.selected_object_id = null
+      render_objects_list()
+    }
+  } else if (e.key === "d" || e.key === "D") {
+    if (state.selected_object_id != null) {
+      const obj = state.objects.find(o => o.id === state.selected_object_id)
+      if (obj) {
+        const copy = JSON.parse(JSON.stringify(obj))
+        copy.id = state.next_id++
+        copy.name = obj.name + " copy"
+        state.objects.push(copy)
+        render_objects_list()
+        draw()
+      }
+    }
+  }
+})
+
+/* ============================
+   Init
+============================ */
+
+function add_initial_examples() {
+  const square = create_object({
+    name: "Unit square",
+    type: "polygon",
+    color: "#60a5fa",
+    coords: [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}],
+    closed: true
+  })
+  square.transforms.push({key:"shear_x", params:{c:0.8}})
+  square.transforms.push({key:"reflection_x", params:{}})
+  state.objects.push(square)
+
+  const tri = create_object({
+    name: "Triangle",
+    type: "polygon",
+    color: "#ef4444",
+    coords: [{x:-2,y:0},{x:-0.5,y:2},{x:-1.2,y:0.2}],
+    closed: true
+  })
+  tri.transforms.push({key:"dilation_from_y", params:{c:1.4}})
+  tri.transforms.push({key:"projection_x", params:{}})
+  state.objects.push(tri)
+
+  state.selected_object_id = square.id
+}
+
+window.addEventListener("resize", resize_canvas)
+resize_canvas()
+add_initial_examples()
+render_objects_list()
+update_zoom_badge()
+draw()
+</script>
+</body>
+</html>
