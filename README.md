@@ -1,1 +1,1 @@
-# 100% Vibe coded !!!
+# Only 80% vibe coded !!!
