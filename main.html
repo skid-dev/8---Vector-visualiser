@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Full-Screen Water + DVD 67 + True Reset Empty</title>
+<style>
+  :root { --text: 96% }
+  * { box-sizing: border-box }
+  html, body {
+    height: 100%;
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+    background: #0a0b0f;
+    color: hsl(0 0% var(--text));
+    overflow: hidden;
+  }
+
+  .bg {
+    position: fixed;
+    inset: -12vmax;
+    z-index: -1;
+    filter: blur(80px) saturate(1.05) brightness(0.9);
+    opacity: 0.8;
+    animation: spin 46s linear infinite;
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      hsl(200 90% 60%) 0deg,
+      hsl(260 90% 64%) 90deg,
+      hsl(320 90% 60%) 180deg,
+      hsl(20 90% 60%) 270deg,
+      hsl(200 90% 60%) 360deg
+    );
+    border-radius: 50%;
+    will-change: transform;
+  }
+  .bg.low { animation-play-state: paused; filter: blur(60px) saturate(1.0) brightness(0.85); opacity: 0.65 }
+  @keyframes spin { to { transform: rotate(360deg) } }
+
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    touch-action: manipulation;
+  }
+
+  .hud {
+    position: fixed;
+    left: 50%;
+    bottom: clamp(14px, 3.5vmin, 28px);
+    transform: translateX(-50%);
+    text-align: center;
+    user-select: none;
+    pointer-events: none;
+  }
+  .time { font-size: clamp(22px, 5.5vmin, 48px); letter-spacing: 0.04em; font-weight: 700; mix-blend-mode: screen; text-shadow: 0 0 16px hsl(210 100% 70% / 0.3) }
+  .date { margin-top: 6px; font-size: clamp(12px, 2.6vmin, 16px); opacity: 0.8 }
+  .eta { margin-top: 8px; font-size: clamp(12px, 2.5vmin, 16px); opacity: 0.95; font-weight: 600 }
+  .hint { margin-top: 8px; font-size: clamp(11px, 2.2vmin, 14px); opacity: 0.65; letter-spacing: 0.03em }
+
+  .gear_btn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: hsl(215 25% 22%);
+    color: white;
+    font-size: 22px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    transition: transform .15s ease, background .2s ease;
+    z-index: 10;
+  }
+  .gear_btn:hover { transform: translateY(-1px) scale(1.03); background: hsl(215 25% 28%) }
+  .gear_btn:active { transform: translateY(0) }
+
+  .panel {
+    position: fixed;
+    top: 68px;
+    right: 14px;
+    width: min(92vw, 380px);
+    background: hsl(220 18% 16% / 0.9);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: white;
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 24px 64px rgb(0 0 0 / 0.55);
+    z-index: 12;
+    display: none;
+  }
+  .panel.open { display: block }
+  .panel h3 { margin: 0 0 10px; font-size: 16px; font-weight: 700; letter-spacing: 0.02em }
+  .row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; margin: 10px 0 }
+  .row label { font-size: 13px; opacity: 0.85 }
+  .row input[type="time"], .row input[type="color"], .row select, .row input[type="range"] {
+    height: 36px; border-radius: 10px; border: 1px solid hsl(0 0% 100% / 0.12);
+    background: hsl(220 16% 14%); color: white; padding: 0 10px; font-size: 14px; outline: none;
+  }
+  .row input[type="range"] { height: 8px; padding: 0 }
+  .btns { display: flex; gap: 8px; margin-top: 8px }
+  .btn {
+    flex: 1; height: 40px; border: 0; border-radius: 12px; cursor: pointer; color: white; font-weight: 700; letter-spacing: 0.02em;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .btn.primary { background: linear-gradient(180deg, hsl(160 70% 48%), hsl(160 70% 42%)) }
+  .btn.secondary { background: linear-gradient(180deg, hsl(220 20% 30%), hsl(220 22% 26%)) }
+
+  .empty_btn {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 11;
+    height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    color: white;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    background: linear-gradient(180deg, hsl(200 75% 50%), hsl(200 75% 44%));
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  }
+  .empty_btn:hover { transform: translateY(-1px) }
+  .empty_btn:active { transform: translateY(0) }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg { animation-duration: 180s; filter: blur(60px) saturate(1.0) brightness(0.85) }
+  }
+</style>
+</head>
+<body>
+  <div class="bg" id="bg" aria-hidden="true"></div>
+
+  <button class="gear_btn" id="gear_btn" title="Settings">⚙️</button>
+  <button class="empty_btn" id="empty_btn" title="Empty water and restart (E)">💧 Empty</button>
+
+  <div class="panel" id="panel">
+    <h3>Class Progress</h3>
+    <div class="row">
+      <label for="end_time_input">Ends at</label>
+      <input type="time" id="end_time_input">
+    </div>
+    <div class="row">
+      <label for="color_input">Progress colour</label>
+      <input type="color" id="color_input" value="#4ade80">
+    </div>
+    <div class="row">
+      <label for="quality_select">Performance</label>
+      <select id="quality_select">
+        <option value="auto" selected>Auto (recommended)</option>
+        <option value="high">High</option>
+        <option value="low">Low (max FPS)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="particles_range">Particles</label>
+      <input type="range" id="particles_range" min="0" max="100" value="35">
+    </div>
+    <div class="btns">
+      <button class="btn primary" id="apply_btn">Start</button>
+      <button class="btn secondary" id="clear_btn">Clear</button>
+    </div>
+    <div style="margin-top:10px;font-size:12px;opacity:.75">
+      If the time has already passed today, it will count down to that time tomorrow.
+    </div>
+  </div>
+
+  <canvas id="clock_canvas" aria-label="Full-screen waiting clock with water and DVD 67"></canvas>
+
+  <div class="hud" id="hud">
+    <div class="time" id="time_text">00:00:00</div>
+    <div class="date" id="date_text">Monday, 1 January</div>
+    <div class="eta" id="eta_text"></div>
+    <div class="hint" id="hint_text">click water to splash · press E to empty & restart · space for boost · H to toggle labels</div>
+  </div>
+
+<script>
+"use strict"
+
+const state = {
+  boost: false,
+  show_labels: true,
+  reduce_motion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+
+  w: 0,
+  h: 0,
+  dpr: 1,
+
+  t: 0,
+  last_ts: 0,
+
+  ema_fps: 60,
+  last_draw_ts: 0,
+  frame_interval_ms: 1000 / 60,
+
+  perf_mode: "auto",
+  perf_tier: "med",
+
+  spark_pool: [],
+  spark_accum: 0,
+  max_sparks: 160,
+
+  class_end_ts: null,
+  class_start_ts: null,
+  end_time_hhmm: null,
+  progress_hsl: { h: 140, s: 70, l: 50 },
+
+  particles_strength: 0.35,
+  ticks_cache: null,
+
+  bouncer: {
+    x: 120,
+    y: 120,
+    vx: 180,
+    vy: 150,
+    hue: 200,
+    pulse: 0,
+    font_px: 64,
+    pad_px: 16,
+    box_w: 180,
+    box_h: 96
+  },
+
+  visual_progress: 0,
+  drain_active: false,
+  drain_t: 0,
+  drain_rate: 2.2,
+  reset_after_drain: false,
+
+  splashes: []
+}
+
+const bg = document.getElementById("bg")
+const canvas = document.getElementById("clock_canvas")
+const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true })
+
+const time_text = document.getElementById("time_text")
+const date_text = document.getElementById("date_text")
+const eta_text = document.getElementById("eta_text")
+
+const gear_btn = document.getElementById("gear_btn")
+const empty_btn = document.getElementById("empty_btn")
+const panel = document.getElementById("panel")
+const end_time_input = document.getElementById("end_time_input")
+const color_input = document.getElementById("color_input")
+const quality_select = document.getElementById("quality_select")
+const particles_range = document.getElementById("particles_range")
+const apply_btn = document.getElementById("apply_btn")
+const clear_btn = document.getElementById("clear_btn")
+
+const pad = n => String(n).padStart(2, "0")
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+const lerp = (a, b, t) => a + (b - a) * t
+const ease_io_sine = x => -(Math.cos(Math.PI * x) - 1) / 2
+const hsla = (h, s, l, a = 1) => `hsla(${h}, ${s}%, ${l}%, ${a})`
+
+const hex_to_hsl = hex => {
+  let h = 0, s = 0, l = 0
+  let r = 0, g = 0, b = 0
+  const clean = hex.replace("#", "")
+  if (clean.length === 3) {
+    r = parseInt(clean[0] + clean[0], 16)
+    g = parseInt(clean[1] + clean[1], 16)
+    b = parseInt(clean[2] + clean[2], 16)
+  } else {
+    r = parseInt(clean.slice(0, 2), 16)
+    g = parseInt(clean.slice(2, 4), 16)
+    b = parseInt(clean.slice(4, 6), 16)
+  }
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  l = (max + min) / 2
+  if (max === min) {
+    h = 0
+    s = 0
+  } else {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break
+      case g: h = (b - r) / d + 2; break
+      case b: h = (r - g) / d + 4; break
+    }
+    h /= 6
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
+}
+
+const get_perf_config = () => {
+  const mode = state.perf_mode
+  const tier = state.perf_tier
+
+  const is_low = mode === "low" || (mode === "auto" && tier === "low")
+  const is_high = mode === "high" || (mode === "auto" && tier === "high")
+
+  const dpr_cap = is_low ? 1 : (is_high ? 2 : 1.5)
+  const fps_cap = is_low ? 42 : (is_high ? 60 : 50)
+
+  const glow = !is_low
+  const shadow_blur = is_low ? 8 : 16
+
+  const spawn_base = is_low ? 0.8 : (is_high ? 2.6 : 1.6)
+  const spawn_scale = state.particles_strength
+  const spark_spawn_rate = spawn_base * (state.boost ? 1.3 : 1.0) * spawn_scale
+
+  const bead_count = is_low ? 3 : (is_high ? 7 : 5)
+  const tick_count = is_low ? 48 : 60
+  const wave_step = is_low ? 12 : (is_high ? 7 : 9)
+  const bubbles_max = is_low ? 12 : (is_high ? 24 : 18)
+
+  const dvd_speed = is_low ? 140 : 180
+
+  return { dpr_cap, fps_cap, glow, shadow_blur, spark_spawn_rate, bead_count, tick_count, wave_step, bubbles_max, dvd_speed, low: is_low }
+}
+
+const resize = () => {
+  const cfg = get_perf_config()
+  const desired_dpr = Math.max(1, Math.min(cfg.dpr_cap, window.devicePixelRatio || 1))
+  state.dpr = desired_dpr
+
+  const size_w = Math.floor(window.innerWidth)
+  const size_h = Math.floor(window.innerHeight)
+  state.w = size_w
+  state.h = size_h
+
+  canvas.style.width = size_w + "px"
+  canvas.style.height = size_h + "px"
+  canvas.width = Math.floor(size_w * state.dpr)
+  canvas.height = Math.floor(size_h * state.dpr)
+  ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0)
+
+  state.ticks_cache = null
+  init_bouncer_after_resize(cfg)
+}
+window.addEventListener("resize", resize)
+
+const build_ticks_path = (cx, cy, radius, count, major_every) => {
+  const p = new Path2D()
+  const step = (Math.PI * 2) / count
+  let a = -Math.PI / 2
+  for (let i = 0; i < count; i++) {
+    const major = i % major_every === 0
+    const len = major ? 12 : 6
+    const x1 = cx + Math.cos(a) * (radius - len)
+    const y1 = cy + Math.sin(a) * (radius - len)
+    const x2 = cx + Math.cos(a) * radius
+    const y2 = cy + Math.sin(a) * radius
+    p.moveTo(x1, y1)
+    p.lineTo(x2, y2)
+    a += step
+  }
+  return p
+}
+
+const spawn_spark = (angle, radius, hue) => {
+  if (state.spark_pool.length >= state.max_sparks) return
+  state.spark_pool.push({
+    angle,
+    radius,
+    hue,
+    life: lerp(0.6, 1.2, Math.random()),
+    age: 0,
+    speed: lerp(0.35, 0.9, Math.random()),
+    size: lerp(1.2, 2.2, Math.random()),
+    drift: (Math.random() - 0.5) * 0.002
+  })
+}
+const update_sparks = dt => {
+  for (let i = state.spark_pool.length - 1; i >= 0; i--) {
+    const s = state.spark_pool[i]
+    s.age += dt
+    s.angle += s.speed * dt + s.drift
+    s.radius += 0.15 * dt
+    if (s.age >= s.life) state.spark_pool.splice(i, 1)
+  }
+}
+const draw_sparks = (cx, cy, cfg) => {
+  ctx.save()
+  if (cfg.low) ctx.shadowBlur = 0
+  for (const s of state.spark_pool) {
+    const x = cx + Math.cos(s.angle) * s.radius
+    const y = cy + Math.sin(s.angle) * s.radius
+    const k = 1 - (s.age / s.life)
+    const alpha = Math.pow(k, 1.5) * (cfg.low ? 0.5 : 0.75)
+    ctx.beginPath()
+    ctx.arc(x, y, s.size, 0, Math.PI * 2)
+    ctx.fillStyle = hsla(Math.floor(s.hue), 95, 65, alpha)
+    if (!cfg.low) {
+      ctx.shadowColor = hsla(Math.floor(s.hue), 95, 65, alpha * 0.8)
+      ctx.shadowBlur = 12
+    } else {
+      ctx.shadowBlur = 0
+    }
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
+const draw_ring = (cx, cy, radius, thickness, progress, base_alpha, hue, cfg) => {
+  const full = Math.PI * 2
+  const start = -Math.PI / 2
+  const end = start + full * progress
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, 0, full)
+  ctx.lineWidth = thickness
+  ctx.lineCap = "round"
+  ctx.strokeStyle = `hsla(0,0%,100%,${0.06 * base_alpha})`
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, start, end)
+  ctx.lineWidth = thickness
+  ctx.lineCap = "round"
+  const light = 66
+  const sat = 92
+  ctx.strokeStyle = hsla(hue, sat, light, 0.9 * base_alpha)
+  if (!cfg.low) {
+    if (cfg.glow) {
+      ctx.shadowColor = hsla(hue, sat, light, 0.5 * base_alpha)
+      ctx.shadowBlur = cfg.shadow_blur
+    } else {
+      ctx.shadowBlur = 0
+    }
+  } else {
+    ctx.shadowBlur = 0
+  }
+  ctx.stroke()
+
+  const ex = cx + Math.cos(end) * radius
+  const ey = cy + Math.sin(end) * radius
+  const cap_r = thickness * 0.45
+  ctx.beginPath()
+  ctx.arc(ex, ey, cap_r, 0, full)
+  ctx.fillStyle = hsla(hue, sat, 65, 0.45 * base_alpha)
+  if (!cfg.low && cfg.glow) {
+    ctx.shadowColor = hsla(hue, sat, 65, 0.45 * base_alpha)
+    ctx.shadowBlur = 10
+  } else {
+    ctx.shadowBlur = 0
+  }
+  ctx.fill()
+
+  return { end_angle: end }
+}
+
+const draw_liquid_progress = (p, cfg, drain_phase, splashes) => {
+  if (!state.class_end_ts || !state.class_start_ts) return
+
+  const w = state.w
+  const h = state.h
+  const base_y = h * (1 - p)
+
+  const amp = lerp(8, 18, (Math.sin(state.t * 0.5) + 1) / 2) * (0.35 + 0.65 * (1 - p))
+  const phase = state.t * (state.boost ? 2.0 : 1.2)
+  const k = (Math.PI * 2) / (w * 1.35)
+
+  const hsl = state.progress_hsl
+  const top_l = clamp(hsl.l + 16, 0, 100)
+  const bot_l = clamp(hsl.l - 4, 0, 100)
+
+  const grad = ctx.createLinearGradient(0, base_y - 80, 0, h)
+  grad.addColorStop(0, hsla(hsl.h, hsl.s, top_l, lerp(0.5, 0.85, p)))
+  grad.addColorStop(1, hsla(hsl.h, hsl.s, bot_l, lerp(0.6, 0.95, p)))
+
+  ctx.save()
+  ctx.globalCompositeOperation = "screen"
+
+  ctx.beginPath()
+  ctx.moveTo(0, h)
+  ctx.lineTo(0, base_y + amp * Math.sin(phase))
+
+  const step = cfg.wave_step
+  for (let x = 0; x <= w; x += step) {
+    let y = base_y
+      + amp * Math.sin(x * k + phase)
+      + amp * 0.33 * Math.sin(x * k * 2.0 - phase * 0.7)
+
+    if (splashes && splashes.length) {
+      for (const s of splashes) {
+        const age = s.age
+        const fade = Math.exp(-age * 1.6)
+        if (fade < 0.02) continue
+        const dx = x - s.x
+        const sigma2 = Math.pow(w * 0.08, 2)
+        const gauss = Math.exp(-(dx * dx) / sigma2)
+        y -= 0.55 * amp * gauss * fade * Math.sin(dx * 0.06 - age * 6)
+      }
+    }
+
+    ctx.lineTo(x, y)
+  }
+  ctx.lineTo(w, h)
+  ctx.closePath()
+
+  ctx.fillStyle = grad
+  if (!cfg.low) { ctx.shadowColor = hsla(hsl.h, hsl.s, top_l, 0.2); ctx.shadowBlur = 18 } else { ctx.shadowBlur = 0 }
+  ctx.fill()
+
+  const bubble_count = Math.floor(lerp(4, cfg.bubbles_max, p))
+  if (bubble_count > 0) {
+    for (let i = 0; i < bubble_count; i++) {
+      const x = (state.t * 18 + i * 91) % w
+      const y = h - ((state.t * (18 + i) * 6) % (h - base_y)) - base_y * 0.25
+      const s = 1.0 + (i % 4) * 0.25
+      ctx.beginPath()
+      ctx.arc(x, clamp(y, base_y + 4, h - 6), s, 0, Math.PI * 2)
+      ctx.fillStyle = hsla(hsl.h, hsl.s, 96, 0.22)
+      ctx.fill()
+    }
+  }
+
+  if (drain_phase > 0) {
+    const d = drain_phase
+    const cx = w * 0.5
+    const cy = h - 10
+    const r = 18 + 28 * d
+    const g2 = ctx.createRadialGradient(cx, cy, r * 0.15, cx, cy, r)
+    g2.addColorStop(0, hsla(hsl.h, hsl.s, 98, 0.85))
+    g2.addColorStop(0.4, hsla(hsl.h, hsl.s, 70, 0.35))
+    g2.addColorStop(1, hsla(hsl.h, hsl.s, 20, 0.0))
+
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.fillStyle = g2
+    ctx.fill()
+
+    const lines = 8
+    ctx.lineWidth = 1
+    ctx.strokeStyle = hsla(hsl.h, 30, 80, 0.35)
+    for (let i = 0; i < lines; i++) {
+      const a0 = state.t * 4 + (i / lines) * Math.PI * 2
+      ctx.beginPath()
+      for (let j = 0; j <= 18; j++) {
+        const t = j / 18
+        const rr = r * (1 - t)
+        const a = a0 + t * Math.PI * 1.2
+        const x = cx + Math.cos(a) * rr
+        const y = cy + Math.sin(a) * rr
+        if (j === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+    }
+  }
+
+  ctx.restore()
+}
+
+const next_datetime_for_time_str = hhmm => {
+  if (!hhmm) return null
+  const parts = hhmm.split(":")
+  if (parts.length < 2) return null
+  const hh = parseInt(parts[0], 10)
+  const mm = parseInt(parts[1], 10)
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return null
+  const now = new Date()
+  const end = new Date(now)
+  end.setHours(hh, mm, 0, 0)
+  if (end <= now) end.setDate(end.getDate() + 1)
+  return end
+}
+const format_hms = ms => {
+  if (ms <= 0) return "00:00:00"
+  const total = Math.floor(ms / 1000)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  return `${pad(h)}:${pad(m)}:${pad(s)}`
+}
+
+/* ---- DVD 67 ---- */
+const init_bouncer_after_resize = cfg => {
+  const min_dim = Math.min(state.w, state.h)
+  const b = state.bouncer
+
+  b.font_px = Math.max(24, Math.floor(min_dim * 0.12))
+  b.pad_px = Math.floor(b.font_px * 0.35)
+
+  ctx.save()
+  ctx.font = `900 ${b.font_px}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`
+  const tm = ctx.measureText("67")
+  const text_w = Math.max(1, tm.width || b.font_px * 1.2)
+  const text_h = Math.max(1, (tm.actualBoundingBoxAscent || b.font_px * 0.8) + (tm.actualBoundingBoxDescent || b.font_px * 0.2))
+  ctx.restore()
+
+  b.box_w = Math.floor(text_w + b.pad_px * 2)
+  b.box_h = Math.floor(text_h + b.pad_px * 1.6)
+
+  if (b.x + b.box_w > state.w || b.y + b.box_h > state.h) {
+    b.x = Math.floor((state.w - b.box_w) * 0.5)
+    b.y = Math.floor((state.h - b.box_h) * 0.35)
+  }
+
+  const speed = cfg.dvd_speed
+  const angle = Math.random() * Math.PI * 2
+  b.vx = Math.cos(angle) * speed
+  b.vy = Math.sin(angle) * speed
+}
+const draw_round_rect = (x, y, w, h, r) => {
+  const p = new Path2D()
+  const rr = Math.min(r, Math.min(w, h) * 0.5)
+  p.moveTo(x + rr, y)
+  p.lineTo(x + w - rr, y)
+  p.arc(x + w - rr, y + rr, rr, -Math.PI / 2, 0)
+  p.lineTo(x + w, y + h - rr)
+  p.arc(x + w - rr, y + h - rr, rr, 0, Math.PI / 2)
+  p.lineTo(x + rr, y + h)
+  p.arc(x + rr, y + h - rr, rr, Math.PI / 2, Math.PI)
+  p.lineTo(x, y + rr)
+  p.arc(x + rr, y + rr, rr, Math.PI, Math.PI * 1.5)
+  return p
+}
+const update_and_draw_bouncer = (dt, cfg) => {
+  const b = state.bouncer
+  b.hue = (b.hue + 20 * dt) % 360
+  b.pulse = Math.max(0, b.pulse - 2.2 * dt)
+
+  b.x += b.vx * dt
+  b.y += b.vy * dt
+
+  if (b.x <= 0) { b.x = 0; b.vx = Math.abs(b.vx); b.hue = (b.hue + 37) % 360; b.pulse = 1 }
+  else if (b.x + b.box_w >= state.w) { b.x = state.w - b.box_w; b.vx = -Math.abs(b.vx); b.hue = (b.hue + 53) % 360; b.pulse = 1 }
+  if (b.y <= 0) { b.y = 0; b.vy = Math.abs(b.vy); b.hue = (b.hue + 61) % 360; b.pulse = 1 }
+  else if (b.y + b.box_h >= state.h) { b.y = state.h - b.box_h; b.vy = -Math.abs(b.vy); b.hue = (b.hue + 47) % 360; b.pulse = 1 }
+
+  const k = ease_io_sine(b.pulse)
+  const outline_l = cfg.low ? 85 : 92
+  const fill_l = cfg.low ? 48 : 52
+  const glow_alpha = cfg.low ? 0.15 : 0.28
+
+  const x = Math.round(b.x)
+  const y = Math.round(b.y)
+  const w = b.box_w
+  const h = b.box_h
+  const r = Math.floor(Math.min(w, h) * 0.18)
+
+  const rect_path = draw_round_rect(x, y, w, h, r)
+
+  const g = ctx.createLinearGradient(x, y, x, y + h)
+  g.addColorStop(0, hsla((b.hue + 20) % 360, 90, fill_l + 6, 0.95))
+  g.addColorStop(1, hsla((b.hue + 340) % 360, 90, fill_l - 4, 0.95))
+
+  ctx.save()
+  if (!cfg.low) { ctx.shadowColor = hsla(b.hue, 95, 60, glow_alpha + k * 0.25); ctx.shadowBlur = cfg.shadow_blur + k * 10 } else { ctx.shadowBlur = 0 }
+  ctx.fillStyle = g
+  ctx.fill(rect_path)
+
+  ctx.lineWidth = 2
+  ctx.strokeStyle = hsla(b.hue, 95, outline_l, 0.92)
+  ctx.stroke(rect_path)
+
+  ctx.font = `900 ${b.font_px}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  const tx = x + w / 2
+  const ty = y + h / 2 + Math.floor(b.font_px * 0.05)
+
+  if (!cfg.low) { ctx.shadowColor = hsla(0, 0, 100, 0.28); ctx.shadowBlur = 8 + k * 6 } else { ctx.shadowBlur = 0 }
+  ctx.fillStyle = "white"
+  ctx.fillText("67", tx, ty)
+
+  ctx.restore()
+}
+
+/* ---- progress helpers ---- */
+const true_progress_and_rate = () => {
+  if (!(state.class_end_ts && state.class_start_ts)) return { p_true: 0, rate_per_sec: 0 }
+  const now = new Date()
+  const total_ms = state.class_end_ts - state.class_start_ts
+  const elapsed_ms = now - state.class_start_ts
+  const p_true = total_ms > 0 ? clamp(elapsed_ms / total_ms, 0, 1) : 1
+  const rate_per_sec = total_ms > 0 ? 1 / (total_ms / 1000) : 0
+  return { p_true, rate_per_sec }
+}
+
+/* ---- main render ---- */
+const render = ts => {
+  if (!state.last_ts) state.last_ts = ts
+  const dt = clamp((ts - state.last_ts) / 1000, 0, 0.05)
+  state.last_ts = ts
+  state.t += dt
+
+  const inst_fps = dt > 0 ? 1 / dt : 60
+  state.ema_fps = state.ema_fps * 0.9 + inst_fps * 0.1
+
+  if (state.perf_mode === "auto") {
+    if (state.ema_fps < 46) state.perf_tier = "low"
+    else if (state.ema_fps > 57) state.perf_tier = "high"
+    else state.perf_tier = "med"
+  }
+
+  const cfg = get_perf_config()
+
+  state.frame_interval_ms = 1000 / cfg.fps_cap
+  if (ts - state.last_draw_ts < state.frame_interval_ms) { request_animation_frame_render(); return }
+  state.last_draw_ts = ts
+
+  bg.classList.toggle("low", cfg.low)
+
+  const need_dpr = Math.max(1, Math.min(cfg.dpr_cap, window.devicePixelRatio || 1))
+  if (Math.abs(need_dpr - state.dpr) > 0.01) resize()
+
+  const now = new Date()
+  const ms = now.getMilliseconds() / 1000
+  const sec = now.getSeconds() + ms
+  const min = now.getMinutes() + sec / 60
+  const hour = (now.getHours() % 12) + min / 60
+
+  const { p_true } = true_progress_and_rate()
+
+  if (state.drain_active) {
+    state.drain_t += dt
+    state.visual_progress = Math.max(0, state.visual_progress - state.drain_rate * dt)
+    if (state.visual_progress <= 0.001) {
+      state.drain_active = false
+      if (state.reset_after_drain && state.end_time_hhmm) {
+        const fresh_end = next_datetime_for_time_str(state.end_time_hhmm)
+        state.class_start_ts = new Date()
+        state.class_end_ts = fresh_end
+        state.visual_progress = 0
+        state.reset_after_drain = false
+        try {
+          localStorage.setItem("class_end_iso", state.class_end_ts.toISOString())
+          localStorage.setItem("class_start_iso", state.class_start_ts.toISOString())
+        } catch (e) {}
+      }
+    }
+  } else {
+    const delta = p_true - state.visual_progress
+    const alpha = 1 - Math.exp(-2.6 * dt)
+    state.visual_progress += delta * alpha
+  }
+
+  const p_draw = clamp(state.visual_progress, 0, 1)
+
+  if (state.splashes.length) {
+    for (let i = state.splashes.length - 1; i >= 0; i--) {
+      state.splashes[i].age += dt
+      if (state.splashes[i].age > 2.2) state.splashes.splice(i, 1)
+    }
+  }
+
+  const cx = state.w / 2
+  const cy = state.h / 2
+  const base_r = Math.min(state.w, state.h) * 0.34
+
+  ctx.clearRect(0, 0, state.w, state.h)
+
+  const drain_phase = state.drain_active ? clamp(state.drain_t / 0.6, 0, 1) : 0
+  draw_liquid_progress(p_draw, cfg, drain_phase, state.splashes)
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, base_r * 0.7, 0, Math.PI * 2)
+  ctx.fillStyle = hsla(200, 80, cfg.low ? 16 : 18, cfg.low ? 0.18 : 0.25)
+  if (!cfg.low) { ctx.shadowColor = hsla(220, 95, 60, 0.16); ctx.shadowBlur = 50 } else { ctx.shadowBlur = 0 }
+  ctx.fill()
+
+  if (!state.ticks_cache || state.ticks_cache.count !== cfg.tick_count || state.ticks_cache.r !== base_r) {
+    const outer = build_ticks_path(cx, cy, base_r + 44, cfg.tick_count, 5)
+    const inner = build_ticks_path(cx, cy, base_r - 48, cfg.tick_count, 5)
+    state.ticks_cache = { outer, inner, count: cfg.tick_count, r: base_r }
+  }
+  ctx.lineWidth = 1
+  ctx.strokeStyle = `hsla(0,0%,100%,${cfg.low ? 0.25 : 0.35})`
+  ctx.stroke(state.ticks_cache.outer)
+  ctx.strokeStyle = `hsla(0,0%,100%,${cfg.low ? 0.20 : 0.28})`
+  ctx.stroke(state.ticks_cache.inner)
+
+  const breathe = state.reduce_motion ? 0 : Math.sin(state.t * (state.boost ? 1.3 : 0.85)) * 5
+  const hue_base = (state.t * (state.boost ? 24 : 12) * 10) % 360
+
+  const hour_th = 22
+  const min_th = 14
+  const sec_th = 9
+
+  const r_hour = base_r - 18 + breathe * 0.10
+  const r_min = base_r + 13 + breathe * 0.15
+  const r_sec = base_r + 46 + breathe * 0.20
+
+  const p_hour = (hour % 12) / 12
+  const p_min = (min % 60) / 60
+  const p_sec = (sec % 60) / 60
+
+  const hour_hue = (hue_base + 220) % 360
+  const min_hue = (hue_base + 140) % 360
+  const sec_hue = (hue_base + 60) % 360
+
+  const end_hour = draw_ring(cx, cy, r_hour, hour_th, p_hour, 0.95, hour_hue, { ...cfg })
+  const end_min = draw_ring(cx, cy, r_min, min_th, p_min, 0.95, min_hue, { ...cfg })
+  const end_sec = draw_ring(cx, cy, r_sec, sec_th, p_sec, 0.9,  sec_hue, { ...cfg })
+
+  const bead_count = cfg.bead_count
+  for (let i = 0; i < bead_count; i++) {
+    const phase = i / bead_count
+    const wobble = Math.sin(state.t * (1.4 + i * 0.06) + i) * (cfg.low ? 0.012 : 0.018)
+    const k = (p_sec + phase) % 1
+    const a = -Math.PI / 2 + k * Math.PI * 2 + wobble
+    const rr = r_sec + Math.sin(state.t * 1.1 + i) * 5
+    const x = cx + Math.cos(a) * rr
+    const y = cy + Math.sin(a) * rr
+    const s = 2.0 + Math.sin(state.t * 1.6 + i) * 0.7
+    ctx.beginPath()
+    ctx.arc(x, y, s, 0, Math.PI * 2)
+    ctx.fillStyle = hsla(sec_hue, 95, 70, cfg.low ? 0.75 : 0.9)
+    if (!cfg.low) { ctx.shadowColor = hsla(sec_hue, 95, 70, 0.55); ctx.shadowBlur = 10 } else { ctx.shadowBlur = 0 }
+    ctx.fill()
+  }
+
+  const target_rate = cfg.spark_spawn_rate
+  state.spark_accum += target_rate * (dt || 0)
+  while (state.spark_accum >= 1) {
+    spawn_spark(end_sec.end_angle + Math.random() * 0.24 - 0.12, r_sec + Math.random() * 5 - 2.5, sec_hue)
+    if (Math.random() < 0.25) spawn_spark(end_min.end_angle + Math.random() * 0.2 - 0.1, r_min + Math.random() * 4 - 2, min_hue)
+    state.spark_accum -= 1
+  }
+  update_sparks(dt)
+  draw_sparks(cx, cy, { ...cfg })
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, 5.5 + ease_io_sine((Math.sin(state.t * (state.boost ? 1.1 : 0.8)) + 1) / 2) * 3.5, 0, Math.PI * 2)
+  ctx.fillStyle = "hsla(0,0%,100%,0.85)"
+  if (!cfg.low) { ctx.shadowColor = "hsla(0,0%,100%,0.4)"; ctx.shadowBlur = 8 } else { ctx.shadowBlur = 0 }
+  ctx.fill()
+
+  update_and_draw_bouncer(dt, cfg)
+
+  if (!render.last_hud || ts - render.last_hud > 150) {
+    time_text.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(Math.floor(sec))}`
+    date_text.textContent = now.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+    if (state.class_end_ts && state.class_start_ts) {
+      const ms_remaining = Math.max(0, state.class_end_ts - now)
+      const { p_true } = true_progress_and_rate()
+      const pct = Math.round(p_true * 100)
+      eta_text.textContent = `${format_hms(ms_remaining)} left · ${pct}%`
+    } else {
+      eta_text.textContent = ""
+    }
+    render.last_hud = ts
+  }
+
+  request_animation_frame_render()
+}
+
+const request_animation_frame_render = () => {
+  if (state.reduce_motion) setTimeout(() => requestAnimationFrame(render), 250)
+  else requestAnimationFrame(render)
+}
+
+/* ---- interactions ---- */
+window.addEventListener("keydown", e => {
+  if (e.code === "Space") state.boost = true
+  if (e.key === "h" || e.key === "H") {
+    state.show_labels = !state.show_labels
+    document.getElementById("hud").style.display = state.show_labels ? "" : "none"
+  }
+  if (e.key === "e" || e.key === "E") trigger_empty_reset()
+})
+window.addEventListener("keyup", e => { if (e.code === "Space") state.boost = false })
+
+canvas.addEventListener("pointerdown", e => {
+  const rect = canvas.getBoundingClientRect()
+  const x = (e.clientX - rect.left) * (state.w / rect.width)
+  state.splashes.push({ x, age: 0 })
+  if (state.splashes.length > 4) state.splashes.shift()
+})
+
+gear_btn.addEventListener("click", () => { panel.classList.toggle("open") })
+
+apply_btn.addEventListener("click", () => {
+  const hhmm = end_time_input.value
+  const end_dt = next_datetime_for_time_str(hhmm)
+  if (!end_dt) { alert("Please enter a valid end time in HH:MM format"); return }
+  state.class_start_ts = new Date()
+  state.class_end_ts = end_dt
+  state.end_time_hhmm = hhmm
+  state.progress_hsl = hex_to_hsl(color_input.value)
+  state.perf_mode = quality_select.value
+  state.particles_strength = parseInt(particles_range.value, 10) / 100
+
+  state.visual_progress = 0
+  state.drain_active = false
+  state.reset_after_drain = false
+
+  try {
+    localStorage.setItem("class_end_iso", end_dt.toISOString())
+    localStorage.setItem("class_start_iso", state.class_start_ts.toISOString())
+    localStorage.setItem("end_time_hhmm", state.end_time_hhmm)
+    localStorage.setItem("progress_color_hex", color_input.value)
+    localStorage.setItem("perf_mode", state.perf_mode)
+    localStorage.setItem("particles_strength", String(state.particles_strength))
+  } catch (e) {}
+
+  resize()
+  panel.classList.remove("open")
+})
+
+clear_btn.addEventListener("click", () => {
+  state.class_end_ts = null
+  state.class_start_ts = null
+  state.end_time_hhmm = null
+  state.visual_progress = 0
+  state.drain_active = false
+  state.reset_after_drain = false
+  eta_text.textContent = ""
+  try {
+    localStorage.removeItem("class_end_iso")
+    localStorage.removeItem("class_start_iso")
+    localStorage.removeItem("end_time_hhmm")
+  } catch (e) {}
+})
+
+empty_btn.addEventListener("click", () => trigger_empty_reset())
+
+function trigger_empty_reset () {
+  if (!(state.class_end_ts && state.class_start_ts && state.end_time_hhmm)) {
+    alert("Set an end time first in ⚙️ Settings")
+    return
+  }
+  state.drain_active = true
+  state.reset_after_drain = true
+  state.drain_t = 0
+}
+
+/* live controls */
+quality_select.addEventListener("change", () => {
+  state.perf_mode = quality_select.value
+  try { localStorage.setItem("perf_mode", state.perf_mode) } catch (e) {}
+  resize()
+})
+particles_range.addEventListener("input", () => {
+  state.particles_strength = parseInt(particles_range.value, 10) / 100
+  try { localStorage.setItem("particles_strength", String(state.particles_strength)) } catch (e) {}
+})
+
+/* restore saved */
+const restore_saved = () => {
+  try {
+    const end_iso = localStorage.getItem("class_end_iso")
+    const start_iso = localStorage.getItem("class_start_iso")
+    const hhmm = localStorage.getItem("end_time_hhmm")
+    const hex = localStorage.getItem("progress_color_hex")
+    const saved_mode = localStorage.getItem("perf_mode")
+    const saved_particles = localStorage.getItem("particles_strength")
+
+    if (hex) { color_input.value = hex; state.progress_hsl = hex_to_hsl(hex) }
+    if (saved_mode) { state.perf_mode = saved_mode; quality_select.value = saved_mode }
+    if (saved_particles) { state.particles_strength = clamp(parseFloat(saved_particles), 0, 1); particles_range.value = Math.round(state.particles_strength * 100) }
+
+    if (hhmm) state.end_time_hhmm = hhmm
+
+    if (end_iso && start_iso) {
+      const end = new Date(end_iso)
+      const start = new Date(start_iso)
+      const now = new Date()
+      if (end > now && start < end) {
+        state.class_end_ts = end
+        state.class_start_ts = start
+        end_time_input.value = `${pad(end.getHours())}:${pad(end.getMinutes())}`
+        const total = end - start
+        const elapsed = now - start
+        state.visual_progress = total > 0 ? clamp(elapsed / total, 0, 1) : 0
+      } else {
+        localStorage.removeItem("class_end_iso")
+        localStorage.removeItem("class_start_iso")
+      }
+    }
+  } catch (e) {}
+}
+
+document.addEventListener("visibilitychange", () => { if (document.hidden) state.boost = false })
+
+restore_saved()
+resize()
+requestAnimationFrame(render)
+</script>
+</body>
+</html>
