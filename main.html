@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Full-Screen Water + DVD 67 + True Reset Empty</title>
 <style>
@@ -136,6 +139,20 @@
   @media (prefers-reduced-motion: reduce) {
     .bg { animation-duration: 180s; filter: blur(60px) saturate(1.0) brightness(0.85) }
   }
+
+  #canvas-wrapper {
+    display: grid;
+    place-items: center;
+    height: 100vh;
+  }
+
+  #remaining_text {
+    z-index: 3;
+    font-size: 100px;
+    font-weight: bold;
+    font-family: "Inconsolata", monospace;
+
+  }
 </style>
 </head>
 <body>
@@ -175,12 +192,14 @@
     </div>
   </div>
 
-  <canvas id="clock_canvas" aria-label="Full-screen waiting clock with water and DVD 67"></canvas>
-
+  <div id="canvas-wrapper">
+    <div id="remaining_text"></div>
+      <canvas id="clock_canvas" aria-label="Full-screen waiting clock with water and DVD 67"></canvas>
+  </div>
   <div class="hud" id="hud">
-    <div class="time" id="time_text">00:00:00</div>
+    <div class="time" id="eta_text"></div>
     <div class="date" id="date_text">Monday, 1 January</div>
-    <div class="eta" id="eta_text"></div>
+    <div class="eta" id="time_text">00:00:00</div>
     <div class="hint" id="hint_text">click water to splash · press E to empty & restart · space for boost · H to toggle labels</div>
   </div>
 
@@ -247,6 +266,7 @@ const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true })
 const time_text = document.getElementById("time_text")
 const date_text = document.getElementById("date_text")
 const eta_text = document.getElementById("eta_text")
+const remaining_text = document.getElementById("remaining_text")
 
 const gear_btn = document.getElementById("gear_btn")
 const empty_btn = document.getElementById("empty_btn")
@@ -844,8 +864,9 @@ const render = ts => {
     if (state.class_end_ts && state.class_start_ts) {
       const ms_remaining = Math.max(0, state.class_end_ts - now)
       const { p_true } = true_progress_and_rate()
-      const pct = Math.round(p_true * 100)
-      eta_text.textContent = `${format_hms(ms_remaining)} left · ${pct}%`
+      const pct = (p_true * 100).toFixed(2)
+      eta_text.textContent = `${format_hms(ms_remaining)} left`
+      remaining_text.textContent = `${pct}%`
     } else {
       eta_text.textContent = ""
     }
